@@ -12,6 +12,8 @@ export default class Survey extends Model {
   @field('status') status: number;
   @field('men_count') menCount: number;
   @field('women_count') womenCount: number;
+  @field('server_completed_men') serverCompletedMen: number;
+  @field('server_completed_women') serverCompletedWomen: number;
   @field('synced_at') syncedAt: string;
 
   @children('questions') questions: any;

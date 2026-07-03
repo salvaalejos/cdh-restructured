@@ -3,13 +3,14 @@
  * Usa expo-file-system en lugar de react-native-fs.
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { database } from '../database';
 import Respondent from '../database/models/Respondent';
 import Answer from '../database/models/Answer';
 import Survey from '../database/models/Survey';
 import { apiClient } from '../api/client';
 import { Q } from '@nozbe/watermelondb';
+import { useAuthStore } from '../features/auth/store';
 
 export interface UploadProgress {
   total: number;
@@ -62,7 +63,11 @@ export async function uploadPendingRespondents(
 
       const formData = new FormData();
       formData.append('surveyId', String(localSurvey.serverSurveyId));
-      formData.append('surveyorId', respondent.surveyorId);
+      let surveyorId = respondent.surveyorId;
+      if (surveyorId === 'local' || !surveyorId) {
+        surveyorId = String(useAuthStore.getState().user?.id ?? '');
+      }
+      formData.append('surveyorId', surveyorId);
       if (respondent.age !== null) formData.append('age', String(respondent.age));
       if (respondent.gender) formData.append('gender', respondent.gender);
       if (respondent.schooling) formData.append('schooling', respondent.schooling);
@@ -96,7 +101,6 @@ export async function uploadPendingRespondents(
       }
 
       await apiClient.post('/responses/submit', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });
 

@@ -9,6 +9,7 @@ import { Plus, Trash2, ArrowLeft, Image as ImageIcon, GripVertical, X } from 'lu
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
+import { useRef } from 'react';
 
 interface SubOptionDraft {
     text: string;
@@ -17,6 +18,7 @@ interface SubOptionDraft {
 interface OptionDraft {
     text: string;
     image: string | null;
+    imageUploadKey: string | null;
 }
 
 interface QuestionDraft {
@@ -50,6 +52,7 @@ export default function FormBuilderPage() {
     const [status, setStatus] = useState('1');
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
     const [likertNumInput, setLikertNumInput] = useState<{index: number, max: string, isSubOption: boolean} | null>(null);
+    const imageFilesRef = useRef<Record<string, File>>({});
 
     useEffect(() => {
         const initData = isEditMode ? surveyDetails : duplicateData;
@@ -64,7 +67,7 @@ export default function FormBuilderPage() {
                     id: generateId(),
                     text: q.text,
                     typeId: q.typeId,
-                    options: q.options ? q.options.map((o: any) => ({ text: o.text, image: o.image || null })) : [],
+                    options: q.options ? q.options.map((o: any) => ({ text: o.text, image: o.image || null, imageUploadKey: null })) : [],
                     subOptions: q.subOptions ? q.subOptions.map((so: any) => ({ text: so.text })) : []
                 })));
             }
@@ -93,7 +96,7 @@ export default function FormBuilderPage() {
     const addOption = (qIndex: number) => {
         setQuestions(prev => {
             const next = [...prev];
-            next[qIndex] = { ...next[qIndex], options: [...next[qIndex].options, { text: '', image: null }] };
+            next[qIndex] = { ...next[qIndex], options: [...next[qIndex].options, { text: '', image: null, imageUploadKey: null }] };
             return next;
         });
     };
@@ -147,17 +150,17 @@ export default function FormBuilderPage() {
             const next = [...prev];
             let newOptions: OptionDraft[] = [];
             if (type === 'yesno') {
-                newOptions = [{ text: 'Sí', image: null }, { text: 'No', image: null }];
+                newOptions = [{ text: 'Sí', image: null, imageUploadKey: null }, { text: 'No', image: null, imageUploadKey: null }];
             } else if (type === 'likert-text') {
                 newOptions = [
-                    { text: 'Muy mal', image: null },
-                    { text: 'Mal', image: null },
-                    { text: 'Regular', image: null },
-                    { text: 'Bien', image: null },
-                    { text: 'Muy bien', image: null }
+                    { text: 'Muy mal', image: null, imageUploadKey: null },
+                    { text: 'Mal', image: null, imageUploadKey: null },
+                    { text: 'Regular', image: null, imageUploadKey: null },
+                    { text: 'Bien', image: null, imageUploadKey: null },
+                    { text: 'Muy bien', image: null, imageUploadKey: null }
                 ];
             } else if (type === 'likert-num') {
-                newOptions = Array.from({length: maxNum + 1}, (_, i) => ({ text: String(i), image: null }));
+                newOptions = Array.from({length: maxNum + 1}, (_, i) => ({ text: String(i), image: null, imageUploadKey: null }));
             }
             // Replace completely or append? Let's append if there are existing valid options, otherwise replace.
             const hasExisting = next[qIndex].options.some(o => o.text.trim() !== '' || !!o.image);
@@ -197,12 +200,34 @@ export default function FormBuilderPage() {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            updateOption(qIndex, oIndex, 'image', base64String);
-        };
-        reader.readAsDataURL(file);
+        const uploadKey = `image_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        imageFilesRef.current[uploadKey] = file;
+
+        const previewUrl = URL.createObjectURL(file);
+        setQuestions(prev => {
+            const next = [...prev];
+            const nextOptions = [...next[qIndex].options];
+            nextOptions[oIndex] = { ...nextOptions[oIndex], image: previewUrl, imageUploadKey: uploadKey };
+            next[qIndex] = { ...next[qIndex], options: nextOptions };
+            return next;
+        });
+    };
+
+    const removeImage = (qIndex: number, oIndex: number) => {
+        const opt = questions[qIndex].options[oIndex];
+        if (opt.imageUploadKey) {
+            delete imageFilesRef.current[opt.imageUploadKey];
+        }
+        if (opt.image && opt.image.startsWith('blob:')) {
+            URL.revokeObjectURL(opt.image);
+        }
+        setQuestions(prev => {
+            const next = [...prev];
+            const nextOptions = [...next[qIndex].options];
+            nextOptions[oIndex] = { ...nextOptions[oIndex], image: null, imageUploadKey: null };
+            next[qIndex] = { ...next[qIndex], options: nextOptions };
+            return next;
+        });
     };
 
     const onDragEnd = (result: DropResult) => {
@@ -232,39 +257,44 @@ export default function FormBuilderPage() {
         );
         if (hasMissingSubOptions) return toast.error('Una o más preguntas de tipo matriz no tienen filas (subopciones) válidas.');
 
-        const payload = {
+        const questionsPayload = questions.map(q => ({
+            text: q.text,
+            typeId: q.typeId,
+            options: [2, 3, 4, 5].includes(q.typeId)
+                ? q.options.filter(o => o.text.trim() !== '' || !!o.image).map(o => ({
+                    text: o.text,
+                    image: o.imageUploadKey ? o.imageUploadKey : (o.image && !o.image.startsWith('blob:') ? o.image : null)
+                }))
+                : [],
+            subOptions: [4, 5].includes(q.typeId) ? q.subOptions.filter(so => so.text.trim() !== '') : []
+        }));
+
+        // Build FormData with survey JSON + image files
+        const formData = new FormData();
+        formData.append('survey', JSON.stringify({
             title,
             description,
             location: surveyLocation,
             status: parseInt(status),
-            questions: questions.map(q => ({
-                text: q.text,
-                typeId: q.typeId,
-                options: [2, 3, 4, 5].includes(q.typeId) ? q.options.filter(o => o.text.trim() !== '' || !!o.image) : [],
-                subOptions: [4, 5].includes(q.typeId) ? q.subOptions.filter(so => so.text.trim() !== '') : []
-            }))
+            questions: questionsPayload
+        }));
+
+        for (const [key, file] of Object.entries(imageFilesRef.current)) {
+            formData.append(key, file);
+        }
+
+        const onSuccess = () => {
+            toast.success(isEditMode ? 'Encuesta actualizada exitosamente' : 'Encuesta creada exitosamente');
+            navigate('/admin/forms');
+        };
+        const onError = (err: any) => {
+            toast.error(err.response?.data?.error || 'Error al guardar la encuesta');
         };
 
         if (isEditMode) {
-            updateSurvey(payload, {
-                onSuccess: () => {
-                    toast.success('Encuesta actualizada exitosamente');
-                    navigate('/admin/forms');
-                },
-                onError: (err: any) => {
-                    toast.error(err.response?.data?.error || 'Error al actualizar la encuesta');
-                }
-            });
+            updateSurvey(formData, { onSuccess, onError });
         } else {
-            createSurvey(payload, {
-                onSuccess: () => {
-                    toast.success('Encuesta creada exitosamente');
-                    navigate('/admin/forms');
-                },
-                onError: (err: any) => {
-                    toast.error(err.response?.data?.error || 'Error al guardar la encuesta');
-                }
-            });
+            createSurvey(formData, { onSuccess, onError });
         }
     };
 
@@ -386,7 +416,7 @@ export default function FormBuilderPage() {
                                                                     <button 
                                                                         type="button"
                                                                         className="absolute top-0 right-0 bg-destructive/80 text-white rounded-bl-sm p-0.5 hover:bg-destructive"
-                                                                        onClick={() => updateOption(qIndex, oIndex, 'image', null)}
+                                                                        onClick={() => removeImage(qIndex, oIndex)}
                                                                         title="Quitar imagen"
                                                                     >
                                                                         <X className="h-3 w-3" />

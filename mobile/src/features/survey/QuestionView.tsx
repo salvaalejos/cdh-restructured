@@ -148,7 +148,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                     </View>
                     <Text 
                       className="text-lg font-bold flex-1"
-                      style={{ color: isSelected ? '#3B82F6' : '#F8FAFC' }}
+                      style={{ color: isSelected ? '#3B82F6' : '#1E293B' }}
                     >
                       {opt.text}
                     </Text>
@@ -160,64 +160,94 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
         )}
 
         {[4, 5].includes(question.typeId) && question.subOptions && question.options && (
-          <View className="space-y-6">
-            {question.subOptions.map((subOpt) => (
-              <View key={subOpt.id} className="bg-card border-2 border-border rounded-2xl p-4 shadow-sm mb-4">
-                <Text className="text-foreground text-xl font-bold mb-4">{subOpt.text}</Text>
-                
-                <View className="flex-row flex-wrap justify-between">
-                  {question.options!.map((opt) => {
-                     const currentSubAnswer = currentAnswer?.[subOpt.id];
-                     const isSelected = question.typeId === 4
-                        ? currentSubAnswer === opt.id
-                        : (Array.isArray(currentSubAnswer) && currentSubAnswer.includes(opt.id));
-                     
-                     return (
-                       <TouchableOpacity
-                          key={opt.id}
-                          className="w-[48%] flex-col border rounded-xl mb-3 overflow-hidden"
-                          style={{
-                            borderColor: isSelected ? '#3B82F6' : '#E2E8F0',
-                            backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                          }}
-                          onPress={() => {
-                             if (question.typeId === 4) {
-                               const newState = { ...(currentAnswer || {}), [subOpt.id]: opt.id };
-                               setAnswer(question.id, newState);
-                             } else {
-                               const curr = Array.isArray(currentSubAnswer) ? currentSubAnswer : [];
-                               const newSub = curr.includes(opt.id) 
-                                  ? curr.filter(i => i !== opt.id) 
+          <View className="bg-card border border-border rounded-2xl overflow-hidden">
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+              <View>
+                {/* Header Row */}
+                <View className="flex-row bg-secondary/50 border-b border-border">
+                  <View className="w-28 p-3 justify-center">
+                    <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Afirmación</Text>
+                  </View>
+                  {question.options.map((opt) => {
+                    const hasImage = !!opt.image;
+                    return (
+                      <View key={opt.id} className="w-28 items-center justify-center p-2 border-l border-border">
+                        {hasImage && (
+                          <Image
+                            source={{ uri: opt.image }}
+                            className="w-20 h-14 rounded-lg mb-1 bg-secondary"
+                            resizeMode="contain"
+                          />
+                        )}
+                        <Text
+                          className="text-foreground text-xs font-bold text-center leading-tight"
+                          numberOfLines={2}
+                        >
+                          {opt.text}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Data Rows */}
+                {question.subOptions.map((subOpt, si) => {
+                  const currentSubAnswer = currentAnswer?.[subOpt.id];
+                  return (
+                    <View
+                      key={subOpt.id}
+                      className={`flex-row items-stretch ${si < question.subOptions!.length - 1 ? 'border-b border-border' : ''}`}
+                    >
+                      <View className="w-28 p-3 justify-center">
+                        <Text className="text-foreground text-sm font-bold leading-tight" numberOfLines={3}>
+                          {subOpt.text}
+                        </Text>
+                      </View>
+                      {question.options!.map((opt) => {
+                        const isSelected = question.typeId === 4
+                          ? currentSubAnswer === opt.id
+                          : (Array.isArray(currentSubAnswer) && currentSubAnswer.includes(opt.id));
+
+                        return (
+                          <TouchableOpacity
+                            key={opt.id}
+                            className="w-28 items-center justify-center p-3 border-l border-border"
+                            style={{
+                              backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                            }}
+                            onPress={() => {
+                              if (question.typeId === 4) {
+                                const newState = { ...(currentAnswer || {}), [subOpt.id]: opt.id };
+                                setAnswer(question.id, newState);
+                              } else {
+                                const curr = Array.isArray(currentSubAnswer) ? currentSubAnswer : [];
+                                const newSub = curr.includes(opt.id)
+                                  ? curr.filter((i) => i !== opt.id)
                                   : [...curr, opt.id];
-                               const newState = { ...(currentAnswer || {}), [subOpt.id]: newSub };
-                               setAnswer(question.id, newState);
-                             }
-                          }}
-                       >
-                         {opt.image && (
-                           <Image 
-                             source={{ uri: opt.image }} 
-                             className="w-full h-24 bg-secondary"
-                             resizeMode="contain" 
-                           />
-                         )}
-                         <View className="p-3 flex-row items-center w-full">
-                           <View className={`w-5 h-5 border-2 mr-2 items-center justify-center flex-shrink-0 ${question.typeId === 5 ? 'rounded-md' : 'rounded-full'}`}
+                                const newState = { ...(currentAnswer || {}), [subOpt.id]: newSub };
+                                setAnswer(question.id, newState);
+                              }
+                            }}
+                          >
+                            <View
+                              className={`w-6 h-6 border-2 items-center justify-center ${question.typeId === 5 ? 'rounded-md' : 'rounded-full'}`}
                               style={{
                                 borderColor: isSelected ? '#3B82F6' : '#64748B',
                                 backgroundColor: isSelected ? '#3B82F6' : 'transparent'
                               }}
-                           >
-                             {isSelected && <View className="w-2.5 h-2.5 bg-background rounded-full" />}
-                           </View>
-                           <Text className="text-sm font-bold flex-1" style={{ color: isSelected ? '#3B82F6' : '#F8FAFC' }}>{opt.text}</Text>
-                         </View>
-                       </TouchableOpacity>
-                     );
-                  })}
-                </View>
+                            >
+                              {isSelected && (
+                                <View className={`${question.typeId === 5 ? 'w-3.5 h-3.5 bg-white rounded-sm' : 'w-3 h-3 bg-white rounded-full'}`} />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })}
               </View>
-            ))}
+            </ScrollView>
           </View>
         )}
         <View className="h-10" />

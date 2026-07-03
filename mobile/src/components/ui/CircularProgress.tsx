@@ -56,8 +56,8 @@ export default function CircularProgress({
         </Svg>
         {/* Center Text */}
         <View className="absolute inset-0 items-center justify-center">
-          <Text className="text-foreground text-xl font-bold">
-            {value}
+          <Text className="text-foreground text-lg font-bold">
+            {value}/{max}
           </Text>
           <Text className="text-muted-foreground text-[10px] font-medium -mt-1 uppercase tracking-widest">
             {label}

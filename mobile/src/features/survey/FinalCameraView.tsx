@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useSurveyStore } from './store';
 import { Camera, CheckCircle, SkipForward, Camera as CameraIcon } from 'lucide-react-native';
 import CustomModal, { CustomModalProps } from '../../components/ui/CustomModal';
-import { Camera as VisionCamera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera as VisionCamera, useCameraDevice, useCameraPermission, usePhotoOutput } from 'react-native-vision-camera';
 import { ArrowLeft } from 'lucide-react-native';
 
 export default function FinalCameraView() {
@@ -26,19 +26,19 @@ export default function FinalCameraView() {
     setIsCameraActive(true);
   };
 
+  const photoOutput = usePhotoOutput({});
+
   const takePhoto = async () => {
     try {
-      if (cameraRef.current) {
-        const photo = await cameraRef.current.takePhoto({
-          flash: 'off'
-        });
-        setPhotoUri(`file://${photo.path}`);
-        setIsCameraActive(false); // Apagamos la cámara al tomar la foto para liberar RAM
-      }
+      const { filePath } = await photoOutput.capturePhotoToFile(
+        { flashMode: 'off' },
+        {}
+      );
+      setPhotoUri(`file://${filePath}`);
+      setIsCameraActive(false); // Apagamos la cámara al tomar la foto para liberar RAM
     } catch (e) {
       console.error("Error taking photo:", e);
-      // En emuladores sin cámara suele fallar por política, simulamos una foto para que no te bloquees
-      setPhotoUri(`file:///mock_photo_emulator.jpg`);
+      setPhotoUri(null);
       setIsCameraActive(false);
     }
   };
@@ -159,7 +159,7 @@ export default function FinalCameraView() {
               style={StyleSheet.absoluteFill}
               device={device}
               isActive={true}
-              photo={true}
+              outputs={[photoOutput]}
             />
             <TouchableOpacity 
               className="absolute bottom-8 bg-white/30 w-24 h-24 rounded-full border-4 border-white shadow-2xl items-center justify-center active:bg-white/50"

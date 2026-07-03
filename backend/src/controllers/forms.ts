@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia'
 import prisma from '../db'
 import { authMiddleware } from '../middleware/auth'
+import { saveFile } from '../utils/upload'
 
 export const formsController = new Elysia({ prefix: '/forms' })
     .use(authMiddleware)
@@ -95,8 +96,21 @@ export const formsController = new Elysia({ prefix: '/forms' })
                 }
             }
 
-            const data = body as any // We can type this strictly later using TypeBox, but for now we accept the complex JSON
-            
+            // Handle multipart (survey JSON string + image files) or plain JSON
+            let data: any;
+            const imageFiles: Record<string, File> = {};
+
+            if (typeof body.survey === 'string') {
+                data = JSON.parse(body.survey);
+                for (const key of Object.keys(body)) {
+                    if (key.startsWith('image_') && body[key]?.size) {
+                        imageFiles[key] = body[key] as File;
+                    }
+                }
+            } else {
+                data = body;
+            }
+
             if (!data.title || !data.questions || !Array.isArray(data.questions)) {
                 set.status = 400
                 return { error: 'Faltan campos obligatorios o el formato es incorrecto' }
@@ -116,8 +130,17 @@ export const formsController = new Elysia({ prefix: '/forms' })
                 return { error: 'Una o más preguntas requieren opciones y no tienen ninguna válida.' };
             }
 
+            // Save uploaded images and replace placeholders with URLs
+            for (const q of data.questions) {
+                for (const opt of q.options ?? []) {
+                    if (typeof opt.image === 'string' && opt.image.startsWith('image_') && imageFiles[opt.image]) {
+                        const url = await saveFile(imageFiles[opt.image], 'options');
+                        opt.image = url;
+                    }
+                }
+            }
+
             const survey = await prisma.$transaction(async (tx) => {
-                // 1. Create Survey
                 const newSurvey = await tx.survey.create({
                     data: {
                         title: data.title,
@@ -127,7 +150,6 @@ export const formsController = new Elysia({ prefix: '/forms' })
                     }
                 })
 
-                // 2. Create Questions and Options
                 for (const q of data.questions) {
                     const newQuestion = await tx.question.create({
                         data: {
@@ -142,7 +164,7 @@ export const formsController = new Elysia({ prefix: '/forms' })
                             data: q.options.map((opt: any) => ({
                                 questionId: newQuestion.id,
                                 text: opt.text,
-                                image: opt.image || null // Base64 string if provided
+                                image: opt.image || null
                             }))
                         })
                     }
@@ -186,7 +208,19 @@ export const formsController = new Elysia({ prefix: '/forms' })
         }
 
         try {
-            const data = body as any
+            let data: any;
+            const imageFiles: Record<string, File> = {};
+
+            if (typeof body.survey === 'string') {
+                data = JSON.parse(body.survey);
+                for (const key of Object.keys(body)) {
+                    if (key.startsWith('image_') && body[key]?.size) {
+                        imageFiles[key] = body[key] as File;
+                    }
+                }
+            } else {
+                data = body;
+            }
             
             if (!data.title || !data.questions || !Array.isArray(data.questions)) {
                 set.status = 400
@@ -220,6 +254,16 @@ export const formsController = new Elysia({ prefix: '/forms' })
             if (existingSurvey._count.assignments > 0) {
                 set.status = 400
                 return { error: 'No se puede modificar una encuesta que ya tiene asignaciones' }
+            }
+
+            // Save uploaded images and replace placeholders with URLs
+            for (const q of data.questions) {
+                for (const opt of q.options ?? []) {
+                    if (typeof opt.image === 'string' && opt.image.startsWith('image_') && imageFiles[opt.image]) {
+                        const url = await saveFile(imageFiles[opt.image], 'options');
+                        opt.image = url;
+                    }
+                }
             }
 
             const survey = await prisma.$transaction(async (tx) => {

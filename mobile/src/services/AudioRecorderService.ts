@@ -8,8 +8,8 @@
  */
 
 import notifee, { AndroidImportance, AndroidColor } from '@notifee/react-native';
-import { NitroSound } from 'react-native-nitro-sound';
-import * as FileSystem from 'expo-file-system';
+import Sound from 'react-native-nitro-sound';
+import * as FileSystem from 'expo-file-system/legacy';
 
 class AudioRecorderService {
   private channelId: string | null = null;
@@ -56,19 +56,19 @@ class AudioRecorderService {
       // Crear directorio de destino
       const dir = `${FileSystem.documentDirectory}audios/`;
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
-      const filePath = `${dir}audit_${surveySessionId}_${Date.now()}.m4a`;
-      this.currentPath = filePath;
+      const rawPath = `${dir}audit_${surveySessionId}_${Date.now()}.m4a`;
+      const nativePath = rawPath.replace('file://', '');
+      this.currentPath = rawPath;
 
       // Iniciar grabación JSI — AAC 32kbps mono (eficiente en RAM, REQ-NF-03)
-      await NitroSound.startRecording({
-        path: filePath,
+      await Sound.startRecorder(nativePath, {
         quality: 'low',
         channels: 1,
         sampleRate: 22050,
       });
 
       this.isRecording = true;
-      console.log(`[AudioService] Grabación iniciada → ${filePath}`);
+      console.log(`[AudioService] Grabación iniciada → ${rawPath}`);
     } catch (error) {
       console.error('[AudioService] Error al iniciar grabación:', error);
       await notifee.stopForegroundService().catch(() => {});
@@ -84,7 +84,7 @@ class AudioRecorderService {
     if (!this.isRecording) return null;
 
     try {
-      await NitroSound.stopRecording();
+      await Sound.stopRecorder();
       await notifee.stopForegroundService();
 
       this.isRecording = false;

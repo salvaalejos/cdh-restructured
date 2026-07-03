@@ -24,6 +24,8 @@ export default function ResponseDetailsPage() {
     if (error || !respondent) return <div className="p-8 text-center text-destructive">Error al cargar la respuesta o no fue encontrada.</div>;
 
     const hasLocation = respondent.latitude !== null && respondent.longitude !== null;
+    const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace('/api', '');
+    const mediaUrl = (path: string | null) => path ? `${API_BASE}/${path}` : null;
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 pb-20">
@@ -99,20 +101,19 @@ export default function ResponseDetailsPage() {
                     </div>
 
                     {/* Evidence Card */}
-                    {(respondent.image || respondent.audio) && (
                         <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
                             <div className="bg-muted px-4 py-3 border-b border-border flex items-center gap-2 font-semibold text-foreground">
                                 <ImageIcon className="h-4 w-4 text-primary" /> Evidencia Multimedia
                             </div>
                             <div className="p-4 space-y-4">
-                                {respondent.image && (
+                                {respondent.imagePath ? (
                                     <div className="space-y-2">
                                         <div className="text-sm font-medium text-muted-foreground">Fotografía</div>
                                         <div className="relative group rounded-md overflow-hidden border border-border aspect-video bg-black/5 flex items-center justify-center">
-                                            <img src={respondent.image} alt="Evidencia" className="object-contain w-full h-full" />
+                                            <img src={mediaUrl(respondent.imagePath)} alt="Evidencia" className="object-contain w-full h-full" />
                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                                 <a 
-                                                    href={respondent.image} 
+                                                    href={mediaUrl(respondent.imagePath)} 
                                                     download={`evidencia_${respondent.id}.jpg`}
                                                     className="bg-primary text-primary-foreground p-3 rounded-full hover:scale-110 transition-transform shadow-lg"
                                                     title="Descargar Imagen"
@@ -122,19 +123,32 @@ export default function ResponseDetailsPage() {
                                             </div>
                                         </div>
                                     </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-md border border-border/50">
+                                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                                            <ImageIcon className="h-5 w-5 text-muted-foreground opacity-50" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">Sin fotografía disponible</span>
+                                    </div>
                                 )}
-                                {respondent.audio && (
+                                {respondent.audioPath ? (
                                     <div className="space-y-2">
                                         <div className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Music className="h-4 w-4"/> Grabación de Audio</div>
                                         <audio controls className="w-full h-10">
-                                            <source src={respondent.audio} />
+                                            <source src={mediaUrl(respondent.audioPath)} />
                                             Tu navegador no soporta el elemento de audio.
                                         </audio>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-md border border-border/50">
+                                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                                            <Music className="h-5 w-5 text-muted-foreground opacity-50" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">Sin grabación de audio disponible</span>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    )}
                 </div>
 
                 {/* Right Column: Survey Context & Questionnaire */}

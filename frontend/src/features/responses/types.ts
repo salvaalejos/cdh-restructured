@@ -9,8 +9,8 @@ export interface Respondent {
     schooling: string | null;
     latitude: number | null;
     longitude: number | null;
-    image: string | null;
-    audio: string | null;
+    imagePath: string | null;
+    audioPath: string | null;
     surveyor?: {
         name: string;
         username: string;

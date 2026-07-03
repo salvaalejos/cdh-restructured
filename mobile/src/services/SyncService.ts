@@ -16,8 +16,32 @@ import Survey from '../database/models/Survey';
 import Question from '../database/models/Question';
 import Option from '../database/models/Option';
 import SubOption from '../database/models/SubOption';
-import { apiClient } from '../api/client';
+import Respondent from '../database/models/Respondent';
+import Answer from '../database/models/Answer';
+import { apiClient, API_BASE_URL } from '../api/client';
 import { Q } from '@nozbe/watermelondb';
+import * as FileSystem from 'expo-file-system/legacy';
+
+const SERVER_ORIGIN = API_BASE_URL.replace('/api', '');
+
+async function downloadOptionImage(imageUrl: string, optionId: number): Promise<string> {
+  try {
+    const filename = imageUrl.split('/').pop() || `${optionId}.jpg`;
+    const localDir = FileSystem.documentDirectory + 'options/';
+    await FileSystem.makeDirectoryAsync(localDir, { intermediates: true }).catch(() => {});
+    const localPath = localDir + filename;
+
+    const info = await FileSystem.getInfoAsync(localPath);
+    if (info.exists) return localPath;
+
+    const fullUrl = imageUrl.startsWith('http') ? imageUrl : SERVER_ORIGIN + imageUrl;
+    const result = await FileSystem.downloadAsync(fullUrl, localPath);
+    return result.uri;
+  } catch (error) {
+    console.warn(`[SyncService] Error descargando imagen ${imageUrl}, usando URL remota:`, error);
+    return imageUrl.startsWith('http') ? imageUrl : SERVER_ORIGIN + imageUrl;
+  }
+}
 
 export type SyncStatus =
   | { type: 'up_to_date' }
@@ -49,6 +73,8 @@ export async function syncAssignment(): Promise<SyncStatus> {
     const assignmentId: number = data.id;
     const menCount: number = data.menCount ?? 0;
     const womenCount: number = data.womenCount ?? 0;
+    const serverCompletedMen: number = data.completedProgress?.men ?? 0;
+    const serverCompletedWomen: number = data.completedProgress?.women ?? 0;
     const survey = data.survey;
 
     // Verificar campaña local existente
@@ -69,7 +95,7 @@ export async function syncAssignment(): Promise<SyncStatus> {
     }
 
     // No hay campaña local — descargar y persistir
-    await performDownload(survey, assignmentId, serverSurveyId, menCount, womenCount);
+    await performDownload(survey, assignmentId, serverSurveyId, menCount, womenCount, serverCompletedMen, serverCompletedWomen);
     const newLocal = await getLocalSurvey();
     return { type: 'downloaded', survey: newLocal! };
 
@@ -95,10 +121,12 @@ export async function forceDownload(): Promise<SyncStatus> {
     const assignmentId: number = data.id;
     const menCount: number = data.menCount ?? 0;
     const womenCount: number = data.womenCount ?? 0;
+    const serverCompletedMen: number = data.completedProgress?.men ?? 0;
+    const serverCompletedWomen: number = data.completedProgress?.women ?? 0;
 
     // Borrar campaña local anterior (cascade borrará preguntas, opciones)
     await clearLocalSurvey();
-    await performDownload(data.survey, assignmentId, serverSurveyId, menCount, womenCount);
+    await performDownload(data.survey, assignmentId, serverSurveyId, menCount, womenCount, serverCompletedMen, serverCompletedWomen);
 
     const newLocal = await getLocalSurvey();
     return { type: 'downloaded', survey: newLocal! };
@@ -127,14 +155,71 @@ export async function clearLocalSurvey() {
   });
 }
 
+/** Elimina TODA la base de datos local + archivos multimedia. */
+export async function clearAllLocalData() {
+  // 1. Recopilar rutas de archivos antes de borrar registros
+  const respondents = await database.get<Respondent>('respondents').query().fetch();
+  const mediaPaths: string[] = [];
+  for (const r of respondents) {
+    if (r.imagePath) mediaPaths.push(r.imagePath);
+    if (r.audioPath) mediaPaths.push(r.audioPath);
+  }
+
+  // 2. Borrar archivos multimedia individuales
+  for (const path of mediaPaths) {
+    try {
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.exists) await FileSystem.deleteAsync(path, { idempotent: true });
+    } catch (e) {
+      console.warn('[SyncService] No se pudo borrar archivo:', path, e);
+    }
+  }
+
+  // 3. Borrar directorios completos de opciones y audios
+  const dirs = ['options/', 'audios/'].map(d => FileSystem.documentDirectory + d);
+  for (const dir of dirs) {
+    try {
+      const info = await FileSystem.getInfoAsync(dir);
+      if (info.exists) await FileSystem.deleteAsync(dir, { idempotent: true });
+    } catch (e) {
+      console.warn('[SyncService] No se pudo borrar directorio:', dir, e);
+    }
+  }
+
+  // 4. Borrar TODOS los registros de todas las tablas (orden inverso de dependencias)
+  await database.write(async () => {
+    const tables = ['answers', 'respondents', 'sub_options', 'options', 'questions', 'surveys'] as const;
+    const allRecords = await Promise.all(
+      tables.map(t => database.get<any>(t).query().fetch())
+    );
+    const toDestroy = allRecords.flatMap(records =>
+      records.map(r => r.prepareDestroyPermanently())
+    );
+    await database.batch(...toDestroy);
+  });
+}
+
 /** Escribe la encuesta descargada en WatermelonDB en una sola transacción. */
 async function performDownload(
   survey: any,
   assignmentId: number,
   serverSurveyId: number,
   menCount: number,
-  womenCount: number
+  womenCount: number,
+  serverCompletedMen?: number,
+  serverCompletedWomen?: number
 ) {
+  // Pre-descargar imágenes de opciones antes del batch de DB
+  const optionImageMap: Record<string, string> = {};
+  for (const q of survey.questions ?? []) {
+    for (const opt of q.options ?? []) {
+      if (opt.image && typeof opt.image === 'string' && !opt.image.startsWith('data:')) {
+        const localPath = await downloadOptionImage(opt.image, opt.id);
+        optionImageMap[`${opt.id}`] = localPath;
+      }
+    }
+  }
+
   await database.write(async () => {
     const surveysCollection = database.get<Survey>('surveys');
     const questionsCollection = database.get<Question>('questions');
@@ -150,6 +235,8 @@ async function performDownload(
       s.status = 1;
       s.menCount = menCount;
       s.womenCount = womenCount;
+      s.serverCompletedMen = serverCompletedMen ?? 0;
+      s.serverCompletedWomen = serverCompletedWomen ?? 0;
       s.syncedAt = new Date().toISOString();
     });
 
@@ -168,7 +255,7 @@ async function performDownload(
           lo._raw.question_id = localQuestion.id;
           lo.serverId = opt.id;
           lo.text = opt.text;
-          lo.image = opt.image ?? null;
+          lo.image = optionImageMap[`${opt.id}`] ?? (opt.image?.startsWith('data:') ? null : opt.image ?? null);
         });
       }
 

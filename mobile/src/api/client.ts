@@ -19,7 +19,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('user_token');
+      const token = await SecureStore.getItemAsync('jwt_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

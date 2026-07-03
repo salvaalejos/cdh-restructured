@@ -10,7 +10,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  Modal, ScrollView,
+  Modal, ScrollView, TextInput,
 } from 'react-native';
 import EmergencyPanel from './EmergencyPanel';
 import { useAuthStore } from '../auth/store';
@@ -18,7 +18,7 @@ import { useSurveyStore } from '../survey/store';
 import {
   CloudDownload, DatabaseBackup, LogOut, User,
   Play, UploadCloud, Beaker, RefreshCw, CheckCircle2,
-  AlertCircle, Wifi,
+  AlertCircle, Wifi, Trash2, AlertTriangle, X,
 } from 'lucide-react-native';
 import CircularProgress from '../../components/ui/CircularProgress';
 import CustomModal from '../../components/ui/CustomModal';
@@ -31,6 +31,7 @@ import {
   syncAssignment,
   forceDownload,
   clearLocalSurvey,
+  clearAllLocalData,
   SyncStatus,
 } from '../../services/SyncService';
 import {
@@ -49,13 +50,15 @@ interface DashboardInnerProps {
 
 function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
   const { user, logout } = useAuthStore();
-  const { openForm, startTestSurvey, isLoading: isSurveyLoading } = useSurveyStore();
+  const { openForm, isLoading: isSurveyLoading } = useSurveyStore();
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [showEmergency, setShowEmergency] = useState(false);
   const [modalConfig, setModalConfig] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [pendingCount, setPendingCount] = useState(0);
   const [progress, setProgress] = useState({ men: 0, women: 0, total: 0 });
 
@@ -166,26 +169,24 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
     setModalConfig({
       visible: true,
       title: isTest ? 'Encuesta de Prueba' : 'Empezar Encuesta',
-      description: isTest
-        ? 'Se grabará el audio y se pedirá foto para simular el hardware, pero NO se guardará el registro al finalizar. ¿Comenzar?'
-        : 'Al comenzar, se recopilarán los datos del encuestado y se iniciará la grabación de audio en segundo plano. ¿Deseas continuar?',
+      description: 'Se recopilarán los datos del encuestado y se iniciará la grabación de audio. ¿Deseas continuar?' + (isTest ? ' (Modo prueba — no se guardará nada)' : ''),
       type: 'info',
       confirmText: 'Sí, Comenzar',
       onCancel: () => setModalConfig(null),
       onConfirm: async () => {
         setModalConfig(null);
-        if (isTest) {
-          await startTestSurvey();
-        } else {
-          openForm(); // Navega a RespondentFormScreen
-        }
+        await openForm({ isTest });
       },
     });
   };
 
   const targetMen = localSurvey?.menCount ?? 0;
   const targetWomen = localSurvey?.womenCount ?? 0;
-  const totalTarget = targetMen + targetWomen;
+  const serverMen = localSurvey?.serverCompletedMen ?? 0;
+  const serverWomen = localSurvey?.serverCompletedWomen ?? 0;
+  const remainingMen = Math.max(0, targetMen - serverMen);
+  const remainingWomen = Math.max(0, targetWomen - serverWomen);
+  const remainingTotal = remainingMen + remainingWomen;
 
   return (
     <View className="flex-1 bg-background px-6 pt-16 pb-8">
@@ -303,26 +304,29 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
           /* ── Con encuesta activa ──────────────────────────────────────────── */
           <View>
             {/* Card de campaña */}
-            <View className="bg-card border border-border rounded-2xl p-5 mb-6">
-              <Text className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-1">
-                Campaña Actual
-              </Text>
-              <Text className="text-foreground text-xl font-black mb-2 leading-tight" numberOfLines={2}>
-                {localSurvey.title}
-              </Text>
-              <View className="flex-row items-center gap-3">
-                <View className="bg-secondary self-start px-3 py-1 rounded-full">
-                  <Text className="text-secondary-foreground text-xs font-bold">
-                    {localSurvey.description}
+            <View className="bg-card border border-border rounded-2xl overflow-hidden mb-6">
+              <View className="flex-row">
+                <View className="w-1.5 bg-primary" />
+                <View className="flex-1 p-5">
+                  <Text className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-1">
+                    Campaña Actual
                   </Text>
-                </View>
-                {localSurvey.location && (
-                  <View className="bg-secondary self-start px-3 py-1 rounded-full">
-                    <Text className="text-secondary-foreground text-xs font-bold">
-                      📍 {localSurvey.location}
+                  <Text className="text-foreground text-xl font-black mb-1 leading-tight" numberOfLines={2}>
+                    {localSurvey.title}
+                  </Text>
+                  {localSurvey.description ? (
+                    <Text className="text-muted-foreground text-sm leading-relaxed mb-3">
+                      {localSurvey.description}
                     </Text>
-                  </View>
-                )}
+                  ) : null}
+                  {localSurvey.location && (
+                    <View className="bg-secondary self-start px-3 py-1 rounded-full">
+                      <Text className="text-secondary-foreground text-xs font-bold">
+                        📍 {localSurvey.location}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -331,14 +335,14 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
               <View className="flex-row justify-around w-full px-8 mb-6">
                 <CircularProgress
                   value={progress.men}
-                  max={targetMen}
+                  max={remainingMen}
                   label="Hombres"
                   color="#3B82F6"
                   size={100}
                 />
                 <CircularProgress
                   value={progress.women}
-                  max={targetWomen}
+                  max={remainingWomen}
                   label="Mujeres"
                   color="#EC4899"
                   size={100}
@@ -346,7 +350,7 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
               </View>
               <CircularProgress
                 value={progress.total}
-                max={totalTarget}
+                max={remainingTotal}
                 label="Total"
                 color="#10B981"
                 size={110}
@@ -420,6 +424,18 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
         )}
       </ScrollView>
 
+      {/* Borrar progreso */}
+      <TouchableOpacity
+        className="w-full bg-transparent py-4 rounded-2xl items-center justify-center flex-row border border-destructive/30 active:bg-destructive/10 mt-4"
+        onPress={() => {
+          setDeleteConfirmText('');
+          setShowDeleteModal(true);
+        }}
+      >
+        <Trash2 color="#EF4444" size={18} style={{ marginRight: 12 }} />
+        <Text className="text-destructive font-bold text-sm tracking-wide">Borrar progreso</Text>
+      </TouchableOpacity>
+
       {/* Cerrar sesión */}
       <TouchableOpacity
         className="w-full bg-transparent py-4 rounded-2xl items-center justify-center flex-row border border-destructive/30 active:bg-destructive/10 mt-4"
@@ -428,6 +444,87 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
         <LogOut color="#EF4444" size={18} style={{ marginRight: 12 }} />
         <Text className="text-destructive font-bold text-sm tracking-wide">Cerrar Sesión</Text>
       </TouchableOpacity>
+
+      {/* Modal de confirmación de borrado de progreso */}
+      <Modal transparent visible={showDeleteModal} animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View className="flex-1 bg-black/70 justify-center items-center px-6">
+          <View className="w-full bg-card rounded-3xl border border-border p-6 shadow-2xl relative overflow-hidden">
+            <View className="absolute top-0 left-0 right-0 h-1.5 bg-destructive" />
+
+            <TouchableOpacity
+              className="absolute top-4 right-4 p-2 bg-secondary rounded-full active:opacity-80"
+              onPress={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmText('');
+              }}
+            >
+              <X color="#64748B" size={18} />
+            </TouchableOpacity>
+
+            <View className="items-center mb-6 mt-2">
+              <View className="w-16 h-16 rounded-full items-center justify-center mb-4 bg-destructive/10">
+                <AlertTriangle color="#EF4444" size={32} />
+              </View>
+              <Text className="text-foreground text-2xl font-black text-center mb-2 tracking-tight">
+                Borrar todo el progreso
+              </Text>
+              <Text className="text-muted-foreground text-center text-sm leading-relaxed px-2">
+                Esta acción eliminará toda la base de datos local y archivos multimedia, incluyendo encuestas completadas y progreso. Para confirmar, escribe "confirmar".
+              </Text>
+            </View>
+
+            <TextInput
+              className="bg-secondary text-foreground border border-border rounded-xl px-4 py-3.5 mb-6 text-base font-medium"
+              placeholder='Escribe "confirmar"'
+              placeholderTextColor="#64748B"
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View className="flex-row w-full gap-4">
+              <TouchableOpacity
+                className="flex-1 bg-transparent py-3.5 rounded-xl border border-border items-center justify-center active:bg-secondary"
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                }}
+              >
+                <Text className="text-muted-foreground font-bold tracking-wide">Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className={`flex-1 py-3.5 rounded-xl border items-center justify-center shadow-lg ${
+                  deleteConfirmText === 'confirmar'
+                    ? 'bg-destructive border-destructive shadow-destructive/30'
+                    : 'bg-destructive/50 border-destructive/50'
+                }`}
+                onPress={async () => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                  await clearAllLocalData();
+                  useSurveyStore.setState({
+                    isActive: false,
+                    isTestMode: false,
+                    isCancelled: false,
+                    isLoading: false,
+                    showForm: false,
+                    currentIndex: 0,
+                    questions: [],
+                    answers: {},
+                    activeRespondentId: null,
+                    activeSurveyLocalId: null,
+                  });
+                }}
+                disabled={deleteConfirmText !== 'confirmar'}
+              >
+                <Text className="text-white font-bold tracking-wide">Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

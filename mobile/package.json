@@ -27,8 +27,12 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@babel/plugin-transform-class-properties": "^7",
+    "@babel/plugin-transform-private-methods": "^7",
+    "@babel/plugin-transform-typescript": "^7",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.1",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^3.3.2",
     "typescript": "~6.0.3"
   },
@@ -36,7 +40,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "patch-package"
   },
   "private": true
 }

@@ -6,7 +6,7 @@ export const authMiddleware = (app: Elysia) => app
     .resolve(async ({ jwt, headers }: any) => {
         const authHeader = headers['authorization']
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return { authUser: "NO_HEADER: " + JSON.stringify(headers) }
+            return { authUser: null }
         }
 
         const token = authHeader.split(' ')[1]

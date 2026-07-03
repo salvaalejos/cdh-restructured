@@ -8,7 +8,7 @@ import {
   View, Text, TouchableOpacity, TextInput,
   Modal, ActivityIndicator, ScrollView,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { database } from '../../database';
 import Survey from '../../database/models/Survey';
 import Question from '../../database/models/Question';

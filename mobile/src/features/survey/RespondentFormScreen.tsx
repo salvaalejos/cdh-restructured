@@ -22,14 +22,10 @@ import CustomModal from '../../components/ui/CustomModal';
 
 const SCHOOLING_OPTIONS = [
   'Sin escolaridad',
-  'Primaria incompleta',
   'Primaria',
-  'Secundaria incompleta',
   'Secundaria',
-  'Preparatoria incompleta',
   'Preparatoria',
-  'Universidad incompleta',
-  'Universidad',
+  'Licenciatura',
   'Posgrado',
 ];
 
@@ -40,7 +36,7 @@ interface RespondentFormScreenProps {
 }
 
 export default function RespondentFormScreen({ onBack }: RespondentFormScreenProps) {
-  const { startRealSurvey, isLoading } = useSurveyStore();
+  const { startRealSurvey, startTestSurvey, isTestMode, isLoading } = useSurveyStore();
 
   const [gender, setGender] = useState<Gender>(null);
   const [ageText, setAgeText] = useState('');
@@ -58,7 +54,12 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
       return;
     }
 
-    await startRealSurvey({ gender: gender!, age, schooling: schooling! });
+    const demographics = { gender: gender!, age, schooling: schooling! };
+    if (isTestMode) {
+      await startTestSurvey(demographics);
+    } else {
+      await startRealSurvey(demographics);
+    }
   };
 
   if (isLoading) {
@@ -78,6 +79,14 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
       contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 64, paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled"
     >
+      {isTestMode && (
+        <View className="bg-destructive px-4 py-2 rounded-xl mb-4 items-center justify-center">
+          <Text className="text-destructive-foreground font-black text-xs uppercase tracking-widest">
+            Modo de Prueba — No se guardará ningún dato
+          </Text>
+        </View>
+      )}
+
       {errorModal && (
         <CustomModal
           visible

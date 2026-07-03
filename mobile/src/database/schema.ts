@@ -1,22 +1,23 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
-// Schema v2: Añade server_id en questions/options/sub_options para poder
-// construir el payload de subida con los IDs reales del servidor.
-// Añade campos de metas y estado en surveys y respondents.
+// Schema v3: Añade server_completed_men/women para ajustar metas
+// según progreso ya registrado en el servidor desde otros dispositivos.
 export default appSchema({
-  version: 2,
+  version: 3,
   tables: [
     tableSchema({
       name: 'surveys',
       columns: [
-        { name: 'server_survey_id', type: 'number' },       // ID real en el backend
-        { name: 'assignment_id', type: 'number' },           // ID de la asignación
+        { name: 'server_survey_id', type: 'number' },          // ID real en el backend
+        { name: 'assignment_id', type: 'number' },              // ID de la asignación
         { name: 'title', type: 'string' },
         { name: 'description', type: 'string' },
         { name: 'location', type: 'string', isOptional: true },
-        { name: 'status', type: 'number' },                 // 1=activa
-        { name: 'men_count', type: 'number' },              // Meta de hombres
-        { name: 'women_count', type: 'number' },            // Meta de mujeres
+        { name: 'status', type: 'number' },                    // 1=activa
+        { name: 'men_count', type: 'number' },                 // Meta de hombres
+        { name: 'women_count', type: 'number' },               // Meta de mujeres
+        { name: 'server_completed_men', type: 'number', isOptional: true },  // Progreso del servidor
+        { name: 'server_completed_women', type: 'number', isOptional: true },// Progreso del servidor
         { name: 'synced_at', type: 'string', isOptional: true }, // Timestamp ISO de última sync
       ]
     }),

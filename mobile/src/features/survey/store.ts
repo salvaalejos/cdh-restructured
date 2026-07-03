@@ -17,6 +17,8 @@ import Option from '../../database/models/Option';
 import SubOption from '../../database/models/SubOption';
 import Respondent from '../../database/models/Respondent';
 import Answer from '../../database/models/Answer';
+import { useAuthStore } from '../auth/store';
+import * as Location from 'expo-location';
 
 // ─── Tipos de la UI ───────────────────────────────────────────────────────────
 
@@ -62,10 +64,10 @@ interface SurveyState {
   activeSurveyLocalId: string | null;
 
   // Acciones
-  openForm: () => void;
+  openForm: (options?: { isTest?: boolean }) => Promise<void>;
   closeForm: () => void;
   startRealSurvey: (demographics: { gender: string; age: number; schooling: string }) => Promise<void>;
-  startTestSurvey: () => Promise<void>;
+  startTestSurvey: (demographics: { gender: string; age: number; schooling: string }) => Promise<void>;
   setAnswer: (questionId: string, answer: any) => Promise<void>;
   nextQuestion: () => void;
   prevQuestion: () => void;
@@ -264,7 +266,13 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
   activeRespondentId: null,
   activeSurveyLocalId: null,
 
-  openForm: () => set({ showForm: true }),
+  openForm: async (options) => {
+    const sessionId = `${Date.now()}`;
+    await AudioRecorderService.startRecording(sessionId).catch((e) =>
+      console.error('[SurveyStore] Error al iniciar audio en openForm:', e)
+    );
+    set({ showForm: true, isTestMode: options?.isTest ?? false });
+  },
   closeForm: () => set({ showForm: false }),
 
   // ── Iniciar encuesta REAL ─────────────────────────────────────────────────
@@ -272,7 +280,6 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     set({ isLoading: true, showForm: false });
 
     try {
-      // Obtener la encuesta activa local
       const surveys = await database
         .get<Survey>('surveys')
         .query(Q.where('status', 1))
@@ -285,22 +292,27 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
         return;
       }
 
-      // Iniciar grabación de audio (foreground service)
-      const sessionId = `${Date.now()}`;
-      await AudioRecorderService.startRecording(sessionId);
+      let lat: number | null = null;
+      let lng: number | null = null;
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        lat = loc.coords.latitude;
+        lng = loc.coords.longitude;
+      } catch (e) {
+        console.warn('[SurveyStore] No se pudo obtener GPS:', e);
+      }
 
-      // Crear Respondent en WatermelonDB con status=0 (en progreso)
       let respondent: Respondent;
       await database.write(async () => {
         respondent = await database.get<Respondent>('respondents').create((r) => {
           // @ts-ignore
           r._raw.survey_id = localSurvey.id;
-          r.surveyorId = 'local'; // Se resolverá con el userId del token en la subida
+          r.surveyorId = String(useAuthStore.getState().user?.id ?? '');
           r.age = age;
           r.gender = gender;
           r.schooling = schooling;
-          r.latitude = null;
-          r.longitude = null;
+          r.latitude = lat;
+          r.longitude = lng;
           r.imagePath = null;
           r.audioPath = null;
           r.isCancelled = false;
@@ -308,10 +320,8 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
         });
       });
 
-      // Cargar preguntas desde BD
       const questions = await loadQuestionsFromDB(localSurvey.id);
 
-      // Pequeño delay para que el OS pinte la notificación persistente
       await new Promise((res) => setTimeout(res, 800));
 
       set({
@@ -332,7 +342,7 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
   },
 
   // ── Iniciar encuesta de PRUEBA (no guarda en BD) ──────────────────────────
-  startTestSurvey: async () => {
+  startTestSurvey: async (demographics) => {
     set({ isLoading: true, showForm: false });
 
     try {
@@ -347,9 +357,6 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
         return;
       }
 
-      const sessionId = `test_${Date.now()}`;
-      await AudioRecorderService.startRecording(sessionId);
-
       const questions = await loadQuestionsFromDB(localSurvey.id);
 
       await new Promise((res) => setTimeout(res, 800));
@@ -362,7 +369,7 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
         currentIndex: 0,
         questions,
         answers: {},
-        activeRespondentId: null, // No crea registro en BD
+        activeRespondentId: null,
         activeSurveyLocalId: localSurvey.id,
       });
     } catch (err) {
