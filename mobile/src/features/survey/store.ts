@@ -1,0 +1,494 @@
+/**
+ * Survey Store (Zustand)
+ *
+ * Gestiona el estado de la encuesta activa. Ahora conectado a WatermelonDB:
+ *  - Las preguntas se leen desde la BD local (no mocks).
+ *  - Cada respuesta se persiste inmediatamente en la tabla `answers` (REQ-EXEC-02).
+ *  - Al finalizar, el Respondent se actualiza con status=1, imagePath, audioPath.
+ */
+
+import { create } from 'zustand';
+import AudioRecorderService from '../../services/AudioRecorderService';
+import { database } from '../../database';
+import { Q } from '@nozbe/watermelondb';
+import Survey from '../../database/models/Survey';
+import Question from '../../database/models/Question';
+import Option from '../../database/models/Option';
+import SubOption from '../../database/models/SubOption';
+import Respondent from '../../database/models/Respondent';
+import Answer from '../../database/models/Answer';
+
+// ─── Tipos de la UI ───────────────────────────────────────────────────────────
+
+export interface UIOption {
+  id: string;       // WatermelonDB local ID
+  serverId: number; // Backend real ID
+  text: string;
+  image?: string | null;
+}
+
+export interface UISubOption {
+  id: string;
+  serverId: number;
+  text: string;
+}
+
+export interface UIQuestion {
+  id: string;       // WatermelonDB local ID
+  serverId: number; // Backend real ID
+  text: string;
+  typeId: number;   // 1=abierta, 2=única, 3=múltiple, 4=matriz_única, 5=matriz_múltiple
+  options?: UIOption[];
+  subOptions?: UISubOption[];
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+interface SurveyState {
+  // Modos de UI
+  isActive: boolean;       // Cuestionario en pantalla
+  isTestMode: boolean;     // No guarda en BD
+  isCancelled: boolean;
+  isLoading: boolean;      // Spinner mientras inicia
+  showForm: boolean;       // Mostrar RespondentFormScreen
+
+  // Progreso
+  currentIndex: number;
+  questions: UIQuestion[];
+  answers: Record<string, any>; // { [questionLocalId]: respuesta }
+
+  // Referencias DB
+  activeRespondentId: string | null;
+  activeSurveyLocalId: string | null;
+
+  // Acciones
+  openForm: () => void;
+  closeForm: () => void;
+  startRealSurvey: (demographics: { gender: string; age: number; schooling: string }) => Promise<void>;
+  startTestSurvey: () => Promise<void>;
+  setAnswer: (questionId: string, answer: any) => Promise<void>;
+  nextQuestion: () => void;
+  prevQuestion: () => void;
+  cancelSurvey: () => void;
+  endSurvey: (photoUri: string | null, audioUri: string | null) => Promise<void>;
+}
+
+// ─── Helper: cargar preguntas de la BD local ──────────────────────────────────
+
+async function loadQuestionsFromDB(surveyLocalId: string): Promise<UIQuestion[]> {
+  const rawQuestions = await database
+    .get<Question>('questions')
+    .query(Q.where('survey_id', surveyLocalId), Q.sortBy('server_id', Q.asc))
+    .fetch();
+
+  const uiQuestions: UIQuestion[] = [];
+
+  for (const q of rawQuestions) {
+    const rawOptions = await database
+      .get<Option>('options')
+      .query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc))
+      .fetch();
+
+    const rawSubs = await database
+      .get<SubOption>('sub_options')
+      .query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc))
+      .fetch();
+
+    uiQuestions.push({
+      id: q.id,
+      serverId: q.serverId,
+      text: q.text,
+      typeId: q.typeId,
+      options: rawOptions.map((o) => ({
+        id: o.id,
+        serverId: o.serverId,
+        text: o.text,
+        image: o.image,
+      })),
+      subOptions: rawSubs.map((s) => ({
+        id: s.id,
+        serverId: s.serverId,
+        text: s.text,
+      })),
+    });
+  }
+
+  return uiQuestions;
+}
+
+// ─── Helper: persistir una respuesta en WatermelonDB ─────────────────────────
+
+/**
+ * Para preguntas de tipo 2 (única): answer es un string (serverId del option)
+ * Para tipo 3 (múltiple): answer es string[] (serverIds de las opciones)
+ * Para tipos 4/5 (matriz): answer es Record<subOptionLocalId, serverId | serverId[]>
+ * Para tipo 1 (abierta): answer es string de texto
+ *
+ * Guardamos siempre usando server_question_id, server_option_id, server_sub_option_id
+ * para que el payload de subida ya tenga los IDs reales.
+ */
+async function persistAnswer(
+  respondentId: string,
+  question: UIQuestion,
+  answer: any
+) {
+  const answersCollection = database.get<Answer>('answers');
+
+  // Borrar respuestas previas de esta pregunta para este respondente (re-respuesta)
+  const existing = await answersCollection
+    .query(
+      Q.where('respondent_id', respondentId),
+      Q.where('question_id', question.id)
+    )
+    .fetch();
+
+  await database.write(async () => {
+    // Eliminar previas
+    const destroyOps = existing.map((a) => a.prepareDestroyPermanently());
+
+    // Construir nuevas filas
+    const createOps: any[] = [];
+
+    if (question.typeId === 1) {
+      // Abierta
+      createOps.push(
+        answersCollection.prepareCreate((a: Answer) => {
+          // @ts-ignore
+          a._raw.respondent_id = respondentId;
+          // @ts-ignore
+          a._raw.question_id = question.id;
+          a.serverQuestionId = question.serverId;
+          a.serverOptionId = null;
+          a.serverSubOptionId = null;
+          a.openText = String(answer ?? '');
+        })
+      );
+    } else if (question.typeId === 2) {
+      // Única: answer es el local option id
+      const opt = question.options?.find((o) => o.id === answer);
+      if (opt) {
+        createOps.push(
+          answersCollection.prepareCreate((a: Answer) => {
+            // @ts-ignore
+            a._raw.respondent_id = respondentId;
+            // @ts-ignore
+            a._raw.question_id = question.id;
+            a.serverQuestionId = question.serverId;
+            a.serverOptionId = opt.serverId;
+            a.serverSubOptionId = null;
+            a.openText = null;
+          })
+        );
+      }
+    } else if (question.typeId === 3) {
+      // Múltiple: answer es string[] de local option ids
+      const selectedIds: string[] = Array.isArray(answer) ? answer : [];
+      for (const optLocalId of selectedIds) {
+        const opt = question.options?.find((o) => o.id === optLocalId);
+        if (opt) {
+          createOps.push(
+            answersCollection.prepareCreate((a: Answer) => {
+              // @ts-ignore
+              a._raw.respondent_id = respondentId;
+              // @ts-ignore
+              a._raw.question_id = question.id;
+              a.serverQuestionId = question.serverId;
+              a.serverOptionId = opt.serverId;
+              a.serverSubOptionId = null;
+              a.openText = null;
+            })
+          );
+        }
+      }
+    } else if (question.typeId === 4) {
+      // Matriz única: answer es Record<subLocalId, optLocalId>
+      const matrixAns: Record<string, string> = answer ?? {};
+      for (const [subLocalId, optLocalId] of Object.entries(matrixAns)) {
+        const sub = question.subOptions?.find((s) => s.id === subLocalId);
+        const opt = question.options?.find((o) => o.id === optLocalId);
+        if (sub && opt) {
+          createOps.push(
+            answersCollection.prepareCreate((a: Answer) => {
+              // @ts-ignore
+              a._raw.respondent_id = respondentId;
+              // @ts-ignore
+              a._raw.question_id = question.id;
+              a.serverQuestionId = question.serverId;
+              a.serverOptionId = opt.serverId;
+              a.serverSubOptionId = sub.serverId;
+              a.openText = null;
+            })
+          );
+        }
+      }
+    } else if (question.typeId === 5) {
+      // Matriz múltiple: answer es Record<subLocalId, optLocalId[]>
+      const matrixAns: Record<string, string[]> = answer ?? {};
+      for (const [subLocalId, optLocalIds] of Object.entries(matrixAns)) {
+        const sub = question.subOptions?.find((s) => s.id === subLocalId);
+        for (const optLocalId of optLocalIds ?? []) {
+          const opt = question.options?.find((o) => o.id === optLocalId);
+          if (sub && opt) {
+            createOps.push(
+              answersCollection.prepareCreate((a: Answer) => {
+                // @ts-ignore
+                a._raw.respondent_id = respondentId;
+                // @ts-ignore
+                a._raw.question_id = question.id;
+                a.serverQuestionId = question.serverId;
+                a.serverOptionId = opt.serverId;
+                a.serverSubOptionId = sub.serverId;
+                a.openText = null;
+              })
+            );
+          }
+        }
+      }
+    }
+
+    await database.batch(...destroyOps, ...createOps);
+  });
+}
+
+// ─── Store ────────────────────────────────────────────────────────────────────
+
+export const useSurveyStore = create<SurveyState>((set, get) => ({
+  isActive: false,
+  isTestMode: false,
+  isCancelled: false,
+  isLoading: false,
+  showForm: false,
+  currentIndex: 0,
+  questions: [],
+  answers: {},
+  activeRespondentId: null,
+  activeSurveyLocalId: null,
+
+  openForm: () => set({ showForm: true }),
+  closeForm: () => set({ showForm: false }),
+
+  // ── Iniciar encuesta REAL ─────────────────────────────────────────────────
+  startRealSurvey: async ({ gender, age, schooling }) => {
+    set({ isLoading: true, showForm: false });
+
+    try {
+      // Obtener la encuesta activa local
+      const surveys = await database
+        .get<Survey>('surveys')
+        .query(Q.where('status', 1))
+        .fetch();
+      const localSurvey = surveys[0];
+
+      if (!localSurvey) {
+        console.error('[SurveyStore] No hay encuesta local activa.');
+        set({ isLoading: false, showForm: false });
+        return;
+      }
+
+      // Iniciar grabación de audio (foreground service)
+      const sessionId = `${Date.now()}`;
+      await AudioRecorderService.startRecording(sessionId);
+
+      // Crear Respondent en WatermelonDB con status=0 (en progreso)
+      let respondent: Respondent;
+      await database.write(async () => {
+        respondent = await database.get<Respondent>('respondents').create((r) => {
+          // @ts-ignore
+          r._raw.survey_id = localSurvey.id;
+          r.surveyorId = 'local'; // Se resolverá con el userId del token en la subida
+          r.age = age;
+          r.gender = gender;
+          r.schooling = schooling;
+          r.latitude = null;
+          r.longitude = null;
+          r.imagePath = null;
+          r.audioPath = null;
+          r.isCancelled = false;
+          r.status = 0;
+        });
+      });
+
+      // Cargar preguntas desde BD
+      const questions = await loadQuestionsFromDB(localSurvey.id);
+
+      // Pequeño delay para que el OS pinte la notificación persistente
+      await new Promise((res) => setTimeout(res, 800));
+
+      set({
+        isActive: true,
+        isTestMode: false,
+        isCancelled: false,
+        isLoading: false,
+        currentIndex: 0,
+        questions,
+        answers: {},
+        activeRespondentId: respondent!.id,
+        activeSurveyLocalId: localSurvey.id,
+      });
+    } catch (err) {
+      console.error('[SurveyStore] Error al iniciar encuesta real:', err);
+      set({ isLoading: false });
+    }
+  },
+
+  // ── Iniciar encuesta de PRUEBA (no guarda en BD) ──────────────────────────
+  startTestSurvey: async () => {
+    set({ isLoading: true, showForm: false });
+
+    try {
+      const surveys = await database
+        .get<Survey>('surveys')
+        .query(Q.where('status', 1))
+        .fetch();
+      const localSurvey = surveys[0];
+
+      if (!localSurvey) {
+        set({ isLoading: false });
+        return;
+      }
+
+      const sessionId = `test_${Date.now()}`;
+      await AudioRecorderService.startRecording(sessionId);
+
+      const questions = await loadQuestionsFromDB(localSurvey.id);
+
+      await new Promise((res) => setTimeout(res, 800));
+
+      set({
+        isActive: true,
+        isTestMode: true,
+        isCancelled: false,
+        isLoading: false,
+        currentIndex: 0,
+        questions,
+        answers: {},
+        activeRespondentId: null, // No crea registro en BD
+        activeSurveyLocalId: localSurvey.id,
+      });
+    } catch (err) {
+      console.error('[SurveyStore] Error al iniciar prueba:', err);
+      set({ isLoading: false });
+    }
+  },
+
+  // ── Guardar respuesta (persiste en WatermelonDB si no es modo prueba) ──────
+  setAnswer: async (questionId, answer) => {
+    // Actualizar estado Zustand inmediatamente (UI reactiva)
+    set((state) => ({ answers: { ...state.answers, [questionId]: answer } }));
+
+    const { isTestMode, activeRespondentId, questions } = get();
+    if (isTestMode || !activeRespondentId) return;
+
+    // Persistir en BD en background
+    const question = questions.find((q) => q.id === questionId);
+    if (question) {
+      persistAnswer(activeRespondentId, question, answer).catch((e) =>
+        console.error('[SurveyStore] Error persistiendo respuesta:', e)
+      );
+    }
+  },
+
+  nextQuestion: () =>
+    set((state) => {
+      if (state.currentIndex < state.questions.length) {
+        return { currentIndex: state.currentIndex + 1 };
+      }
+      return state;
+    }),
+
+  prevQuestion: () =>
+    set((state) => {
+      if (state.currentIndex > 0) {
+        return { currentIndex: state.currentIndex - 1 };
+      }
+      return state;
+    }),
+
+  // ── Cancelar encuesta ─────────────────────────────────────────────────────
+  cancelSurvey: () => {
+    const state = get();
+    const newAnswers = { ...state.answers };
+
+    // Autocompletar preguntas no respondidas
+    for (let i = state.currentIndex; i < state.questions.length; i++) {
+      const q = state.questions[i];
+      if (!newAnswers[q.id]) {
+        if (q.typeId === 1) {
+          newAnswers[q.id] = 'Cancelada';
+        } else if (q.options && q.options.length > 0) {
+          newAnswers[q.id] = q.typeId === 2 ? q.options[0].id : [q.options[0].id];
+        } else if ([4, 5].includes(q.typeId) && q.subOptions) {
+          const matAns: any = {};
+          q.subOptions.forEach((sub) => {
+            matAns[sub.id] = q.typeId === 4 ? q.options![0]?.id : [q.options![0]?.id];
+          });
+          newAnswers[q.id] = matAns;
+        } else {
+          newAnswers[q.id] = 'Cancelada';
+        }
+      }
+    }
+
+    // Persistir las respuestas autocomplete si no es modo prueba
+    if (!state.isTestMode && state.activeRespondentId) {
+      const respondentId = state.activeRespondentId;
+      const questions = state.questions;
+      Object.entries(newAnswers).forEach(([qId, ans]) => {
+        const q = questions.find((q) => q.id === qId);
+        if (q) persistAnswer(respondentId, q, ans).catch(console.error);
+      });
+
+      // Marcar respondent como cancelado
+      database.write(async () => {
+        const respondent = await database
+          .get<Respondent>('respondents')
+          .find(respondentId);
+        await respondent.update((r) => {
+          r.isCancelled = true;
+        });
+      }).catch(console.error);
+    }
+
+    set({
+      isCancelled: true,
+      answers: newAnswers,
+      currentIndex: state.questions.length,
+    });
+  },
+
+  // ── Finalizar encuesta (guarda foto + audio, cierra registro) ─────────────
+  endSurvey: async (photoUri, audioUri) => {
+    const { isTestMode, activeRespondentId } = get();
+
+    // Detener grabación de audio
+    const finalAudio = audioUri ?? (await AudioRecorderService.stopRecording());
+
+    if (!isTestMode && activeRespondentId) {
+      // Actualizar el Respondent con rutas de archivos y status=1 (listo para subir)
+      await database.write(async () => {
+        const respondent = await database
+          .get<Respondent>('respondents')
+          .find(activeRespondentId);
+        await respondent.update((r) => {
+          // Quitar "file://" prefix porque RNFS trabaja con paths absolutos sin protocolo
+          r.imagePath = photoUri?.replace('file://', '') ?? null;
+          r.audioPath = finalAudio?.replace('file://', '') ?? null;
+          r.status = 1;
+        });
+      });
+    }
+
+    set({
+      isActive: false,
+      isTestMode: false,
+      isCancelled: false,
+      isLoading: false,
+      showForm: false,
+      currentIndex: 0,
+      questions: [],
+      answers: {},
+      activeRespondentId: null,
+      activeSurveyLocalId: null,
+    });
+  },
+}));

@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  roleId    Int       // 1=Admin, 2=Admin, 3=Surveyor
+  username  String    @unique
+  password  String
+  name      String
+  frontId      String?   // Front image of ID
+  backId       String?   // Back image of ID
+  profilePic   String?   @db.Text
+  birthDate    DateTime?
+  permissions  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  assignments Assignment[]
+  respondents Respondent[]
+}
+
+model Survey {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  createdAt   DateTime  @default(now())
+  location    String?
+  status      Int       @default(1)
+
+  questions   Question[]
+  assignments Assignment[]
+  respondents Respondent[]
+}
+
+model Question {
+  id       Int      @id @default(autoincrement())
+  surveyId Int
+  text     String
+  typeId   Int      // 1=open, 2=single, 3=multiple, 4=matrix_single, 5=matrix_multiple
+
+  survey   Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  options  Option[]
+  subOptions SubOption[]
+  answers  Answer[]
+}
+
+model Option {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  text       String
+  image      String?  @db.Text
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+}
+
+model SubOption {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  text       String
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+}
+
+model Assignment {
+  id         Int  @id @default(autoincrement())
+  surveyId   Int
+  userId     Int
+  womenCount Int  @default(0)
+  menCount   Int  @default(0)
+
+  survey     Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Respondent {
+  id          Int      @id @default(autoincrement())
+  surveyorId  Int
+  surveyId    Int
+  age         Int?
+  gender      String?
+  schooling   String?
+  latitude    Float?
+  longitude   Float?
+  imagePath   String?  // Relative path to uploaded photo file
+  audioPath   String?  // Relative path to uploaded audio file
+  isCancelled Boolean  @default(false)
+
+  surveyor   User     @relation(fields: [surveyorId], references: [id], onDelete: Cascade)
+  survey     Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+}
+
+model Answer {
+  id           Int      @id @default(autoincrement())
+  respondentId Int
+  questionId   Int
+  optionId     Int?
+  subOptionId  Int?
+  openText     String?  @db.Text
+
+  respondent   Respondent @relation(fields: [respondentId], references: [id], onDelete: Cascade)
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  option       Option?    @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  subOption    SubOption? @relation(fields: [subOptionId], references: [id], onDelete: Cascade)
+}

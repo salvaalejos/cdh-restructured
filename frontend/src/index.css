@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --background: 210 20% 96%; /* #F4F6F8 */
+    --foreground: 217 33% 17%; /* #1E293B */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 217 33% 17%; /* #1E293B */
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 33% 17%;
+    --primary: 207 72% 25%; /* #12446E - Azul Corporativo */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 32% 91%; /* #E2E8F0 */
+    --secondary-foreground: 217 33% 17%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%; /* #64748B */
+    --accent: 22 74% 45%; /* #CA5D1E - Naranja Acento */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 348 83% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%; /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 207 72% 25%; /* #12446E */
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
