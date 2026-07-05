@@ -203,12 +203,12 @@ async function persistAnswer(
         }
       }
     } else if (question.typeId === 4) {
-      // Matriz única: answer es Record<subLocalId, optLocalId>
+      // Matriz única: answer es Record<optLocalId, subLocalId>
       const matrixAns: Record<string, string> = answer ?? {};
-      for (const [subLocalId, optLocalId] of Object.entries(matrixAns)) {
-        const sub = question.subOptions?.find((s) => s.id === subLocalId);
+      for (const [optLocalId, subLocalId] of Object.entries(matrixAns)) {
         const opt = question.options?.find((o) => o.id === optLocalId);
-        if (sub && opt) {
+        const sub = question.subOptions?.find((s) => s.id === subLocalId);
+        if (opt && sub) {
           createOps.push(
             answersCollection.prepareCreate((a: Answer) => {
               // @ts-ignore
@@ -224,13 +224,13 @@ async function persistAnswer(
         }
       }
     } else if (question.typeId === 5) {
-      // Matriz múltiple: answer es Record<subLocalId, optLocalId[]>
+      // Matriz múltiple: answer es Record<optLocalId, subLocalId[]>
       const matrixAns: Record<string, string[]> = answer ?? {};
-      for (const [subLocalId, optLocalIds] of Object.entries(matrixAns)) {
-        const sub = question.subOptions?.find((s) => s.id === subLocalId);
-        for (const optLocalId of optLocalIds ?? []) {
-          const opt = question.options?.find((o) => o.id === optLocalId);
-          if (sub && opt) {
+      for (const [optLocalId, subLocalIds] of Object.entries(matrixAns)) {
+        const opt = question.options?.find((o) => o.id === optLocalId);
+        for (const subLocalId of subLocalIds ?? []) {
+          const sub = question.subOptions?.find((s) => s.id === subLocalId);
+          if (opt && sub) {
             createOps.push(
               answersCollection.prepareCreate((a: Answer) => {
                 // @ts-ignore
@@ -424,10 +424,10 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
           newAnswers[q.id] = 'Cancelada';
         } else if (q.options && q.options.length > 0) {
           newAnswers[q.id] = q.typeId === 2 ? q.options[0].id : [q.options[0].id];
-        } else if ([4, 5].includes(q.typeId) && q.subOptions) {
+        } else if ([4, 5].includes(q.typeId) && q.options) {
           const matAns: any = {};
-          q.subOptions.forEach((sub) => {
-            matAns[sub.id] = q.typeId === 4 ? q.options![0]?.id : [q.options![0]?.id];
+          q.options.forEach((opt) => {
+            matAns[opt.id] = q.typeId === 4 ? q.subOptions![0]?.id : [q.subOptions![0]?.id];
           });
           newAnswers[q.id] = matAns;
         } else {

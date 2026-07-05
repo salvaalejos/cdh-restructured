@@ -9,18 +9,16 @@ import fs from 'fs'
 const UPLOADS_ROOT = 'uploads/responses'
 fs.mkdirSync(UPLOADS_ROOT, { recursive: true })
 
-async function saveUploadedFile(
-  file: File | null | undefined,
+async function saveUploadedFileBuffer(
+  buffer: Buffer,
   subDir: string,
   prefix: string,
   ext: string
-): Promise<string | null> {
-  if (!file || file.size === 0) return null
+): Promise<string> {
   const dir = path.join(UPLOADS_ROOT, subDir)
   fs.mkdirSync(dir, { recursive: true })
   const filename = `${prefix}_${Date.now()}.${ext}`
   const filePath = path.join(dir, filename)
-  const buffer = Buffer.from(await file.arrayBuffer())
   fs.writeFileSync(filePath, buffer)
   return `${UPLOADS_ROOT}/${subDir}/${filename}`
 }
@@ -47,8 +45,8 @@ export const responsesController = new Elysia({ prefix: '/responses' })
             longitude,
             isCancelled,
             answers: answersJson,
-            image,
-            audio,
+            imageData,
+            audioData,
         } = body
 
         // Parse answers JSON string sent from the mobile app
@@ -77,8 +75,14 @@ export const responsesController = new Elysia({ prefix: '/responses' })
         let audioSavedPath: string | null = null
 
         try {
-            imageSavedPath = await saveUploadedFile(image, subDir, 'photo', 'jpg')
-            audioSavedPath = await saveUploadedFile(audio, subDir, 'audio', 'm4a')
+            if (imageData) {
+                const buffer = Buffer.from(imageData as string, 'base64')
+                imageSavedPath = await saveUploadedFileBuffer(buffer, subDir, 'photo', 'jpg')
+            }
+            if (audioData) {
+                const buffer = Buffer.from(audioData as string, 'base64')
+                audioSavedPath = await saveUploadedFileBuffer(buffer, subDir, 'audio', 'm4a')
+            }
         } catch (fileError: any) {
             set.status = 500
             return { error: 'Error al guardar los archivos multimedia: ' + fileError.message }
@@ -142,8 +146,8 @@ export const responsesController = new Elysia({ prefix: '/responses' })
             longitude: t.Optional(t.String()),
             isCancelled: t.Optional(t.String()),
             answers: t.String(),        // JSON string
-            image: t.Optional(t.File()), // .jpg photo
-            audio: t.Optional(t.File()), // .m4a recording
+            imageData: t.Optional(t.String()),  // base64 .jpg
+            audioData: t.Optional(t.String()),  // base64 .m4a
         })
     })
     .get('/', async ({ query, set }) => {

@@ -34,10 +34,10 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
     isNextDisabled = true;
   } else if ([2, 3].includes(question.typeId)) {
     isNextDisabled = currentAnswer === '' || (Array.isArray(currentAnswer) && currentAnswer.length === 0);
-  } else if ([4, 5].includes(question.typeId) && question.subOptions) {
-    for (const subOpt of question.subOptions) {
-      const subAns = currentAnswer[subOpt.id];
-      if (!subAns || (Array.isArray(subAns) && subAns.length === 0)) {
+  } else if ([4, 5].includes(question.typeId) && question.options) {
+    for (const opt of question.options) {
+      const optAns = currentAnswer[opt.id];
+      if (!optAns || (Array.isArray(optAns) && optAns.length === 0)) {
         isNextDisabled = true;
         break;
       }
@@ -159,72 +159,70 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
           </View>
         )}
 
-        {[4, 5].includes(question.typeId) && question.subOptions && question.options && (
+        {[4, 5].includes(question.typeId) && question.options && question.subOptions && (
           <View className="bg-card border border-border rounded-2xl overflow-hidden">
             <ScrollView horizontal showsHorizontalScrollIndicator={true}>
               <View>
                 {/* Header Row */}
                 <View className="flex-row bg-secondary/50 border-b border-border">
                   <View className="w-28 p-3 justify-center">
-                    <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Afirmación</Text>
+                    <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Ítem</Text>
                   </View>
-                  {question.options.map((opt) => {
-                    const hasImage = !!opt.image;
-                    return (
-                      <View key={opt.id} className="w-28 items-center justify-center p-2 border-l border-border">
-                        {hasImage && (
-                          <Image
-                            source={{ uri: opt.image }}
-                            className="w-20 h-14 rounded-lg mb-1 bg-secondary"
-                            resizeMode="contain"
-                          />
-                        )}
-                        <Text
-                          className="text-foreground text-xs font-bold text-center leading-tight"
-                          numberOfLines={2}
-                        >
-                          {opt.text}
-                        </Text>
-                      </View>
-                    );
-                  })}
+                  {question.subOptions.map((subOpt) => (
+                    <View key={subOpt.id} className="w-28 items-center justify-center p-2 border-l border-border">
+                      <Text
+                        className="text-foreground text-xs font-bold text-center leading-tight"
+                        numberOfLines={2}
+                      >
+                        {subOpt.text}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
 
                 {/* Data Rows */}
-                {question.subOptions.map((subOpt, si) => {
-                  const currentSubAnswer = currentAnswer?.[subOpt.id];
+                {question.options.map((opt, oi) => {
+                  const hasImage = !!opt.image;
+                  const currentOptAnswer = currentAnswer?.[opt.id];
                   return (
                     <View
-                      key={subOpt.id}
-                      className={`flex-row items-stretch ${si < question.subOptions!.length - 1 ? 'border-b border-border' : ''}`}
+                      key={opt.id}
+                      className={`flex-row items-stretch ${oi < question.options!.length - 1 ? 'border-b border-border' : ''}`}
                     >
                       <View className="w-28 p-3 justify-center">
+                        {hasImage && (
+                          <Image
+                            source={{ uri: opt.image }}
+                            className="w-full h-14 rounded-lg mb-1 bg-secondary"
+                            resizeMode="contain"
+                          />
+                        )}
                         <Text className="text-foreground text-sm font-bold leading-tight" numberOfLines={3}>
-                          {subOpt.text}
+                          {opt.text}
                         </Text>
                       </View>
-                      {question.options!.map((opt) => {
+                      {question.subOptions!.map((subOpt) => {
                         const isSelected = question.typeId === 4
-                          ? currentSubAnswer === opt.id
-                          : (Array.isArray(currentSubAnswer) && currentSubAnswer.includes(opt.id));
+                          ? currentOptAnswer === subOpt.id
+                          : (Array.isArray(currentOptAnswer) && currentOptAnswer.includes(subOpt.id));
 
                         return (
                           <TouchableOpacity
-                            key={opt.id}
+                            key={subOpt.id}
                             className="w-28 items-center justify-center p-3 border-l border-border"
                             style={{
                               backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                             }}
                             onPress={() => {
                               if (question.typeId === 4) {
-                                const newState = { ...(currentAnswer || {}), [subOpt.id]: opt.id };
+                                const newState = { ...(currentAnswer || {}), [opt.id]: subOpt.id };
                                 setAnswer(question.id, newState);
                               } else {
-                                const curr = Array.isArray(currentSubAnswer) ? currentSubAnswer : [];
-                                const newSub = curr.includes(opt.id)
-                                  ? curr.filter((i) => i !== opt.id)
-                                  : [...curr, opt.id];
-                                const newState = { ...(currentAnswer || {}), [subOpt.id]: newSub };
+                                const curr = Array.isArray(currentOptAnswer) ? currentOptAnswer : [];
+                                const newSub = curr.includes(subOpt.id)
+                                  ? curr.filter((i) => i !== subOpt.id)
+                                  : [...curr, subOpt.id];
+                                const newState = { ...(currentAnswer || {}), [opt.id]: newSub };
                                 setAnswer(question.id, newState);
                               }
                             }}

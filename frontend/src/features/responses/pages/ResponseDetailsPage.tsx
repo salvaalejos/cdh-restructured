@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MapPin, User, GraduationCap, Calendar, Download, Music, Image as ImageIcon, Map as MapIcon, ClipboardCheck, CheckCircle2, Circle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { AudioPlayerWavesurfer } from '../components/AudioPlayerWavesurfer';
 
 // Fix Leaflet's default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -24,7 +25,7 @@ export default function ResponseDetailsPage() {
     if (error || !respondent) return <div className="p-8 text-center text-destructive">Error al cargar la respuesta o no fue encontrada.</div>;
 
     const hasLocation = respondent.latitude !== null && respondent.longitude !== null;
-    const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace('/api', '');
+    const API_BASE = (import.meta.env.VITE_API_URL || '').replace('/api', '');
     const mediaUrl = (path: string | null) => path ? `${API_BASE}/${path}` : null;
 
     return (
@@ -134,10 +135,7 @@ export default function ResponseDetailsPage() {
                                 {respondent.audioPath ? (
                                     <div className="space-y-2">
                                         <div className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Music className="h-4 w-4"/> Grabación de Audio</div>
-                                        <audio controls className="w-full h-10">
-                                            <source src={mediaUrl(respondent.audioPath)} />
-                                            Tu navegador no soporta el elemento de audio.
-                                        </audio>
+                                        <AudioPlayerWavesurfer src={mediaUrl(respondent.audioPath)!} />
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-md border border-border/50">
@@ -239,20 +237,27 @@ export default function ResponseDetailsPage() {
                                                         <table className="w-full text-sm text-left">
                                                             <thead className="bg-muted text-muted-foreground">
                                                                 <tr>
-                                                                    <th className="px-4 py-3 font-medium border-b border-border">Fila / Opción</th>
-                                                                    {question.options.map(opt => (
-                                                                        <th key={opt.id} className="px-2 py-3 font-medium text-center border-b border-l border-border">{opt.text}</th>
+                                                                    <th className="px-4 py-3 font-medium border-b border-border">Ítem</th>
+                                                                    {question.subOptions.map(sub => (
+                                                                        <th key={sub.id} className="px-2 py-3 font-medium text-center border-b border-l border-border">{sub.text}</th>
                                                                     ))}
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-border">
-                                                                {question.subOptions.map(sub => (
-                                                                    <tr key={sub.id} className="hover:bg-muted/30 transition-colors">
-                                                                        <td className="px-4 py-3 font-medium text-foreground">{sub.text}</td>
-                                                                        {question.options.map(opt => {
-                                                                            const isSelected = relatedAnswers.some(a => a.subOptionId === sub.id && a.optionId === opt.id);
+                                                                {question.options.map(opt => (
+                                                                    <tr key={opt.id} className="hover:bg-muted/30 transition-colors">
+                                                                        <td className="px-4 py-3 font-medium text-foreground">
+                                                                            <div className="flex items-center gap-2">
+                                                                                {opt.image && (
+                                                                                    <img src={opt.image} alt={opt.text} className="w-8 h-8 object-contain rounded-sm border border-border shrink-0" />
+                                                                                )}
+                                                                                <span>{opt.text}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        {question.subOptions.map(sub => {
+                                                                            const isSelected = relatedAnswers.some(a => a.optionId === opt.id && a.subOptionId === sub.id);
                                                                             return (
-                                                                                <td key={opt.id} className="px-2 py-3 text-center border-l border-border">
+                                                                                <td key={sub.id} className="px-2 py-3 text-center border-l border-border">
                                                                                     {isSelected ? (
                                                                                         type === 4 ? (
                                                                                             <CheckCircle2 className="h-5 w-5 text-primary mx-auto" />

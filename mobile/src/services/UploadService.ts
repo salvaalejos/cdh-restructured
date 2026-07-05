@@ -25,6 +25,11 @@ export interface UploadResult {
   failed: number;
 }
 
+// Expo FileSystem en este Android requiere file:// para encontrar archivos
+function withFilePrefix(path: string): string {
+  return path.startsWith('file://') ? path : 'file://' + path;
+}
+
 export async function uploadPendingRespondents(
   onProgress?: (p: UploadProgress) => void
 ): Promise<UploadResult> {
@@ -76,33 +81,47 @@ export async function uploadPendingRespondents(
       formData.append('isCancelled', String(respondent.isCancelled));
       formData.append('answers', JSON.stringify(answersPayload));
 
-      // Adjuntar imagen si existe
+      // Adjuntar imagen como base64
       if (respondent.imagePath) {
-        const info = await FileSystem.getInfoAsync(respondent.imagePath);
+        const fileUri = withFilePrefix(respondent.imagePath);
+        const info = await FileSystem.getInfoAsync(fileUri);
+        console.log(`[UploadService] imagePath="${fileUri}" exists=${info.exists}`);
         if (info.exists) {
-          formData.append('image', {
-            uri: respondent.imagePath,
-            type: 'image/jpeg',
-            name: 'photo.jpg',
-          } as any);
+          const base64 = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          formData.append('imageData', base64);
+          console.log('[UploadService] imagen adjuntada como base64');
+        } else {
+          console.warn('[UploadService] archivo de imagen NO EXISTE en la ruta guardada');
         }
+      } else {
+        console.log('[UploadService] imagePath es null, no hay imagen para adjuntar');
       }
 
-      // Adjuntar audio si existe
+      // Adjuntar audio como base64
       if (respondent.audioPath) {
-        const info = await FileSystem.getInfoAsync(respondent.audioPath);
+        const fileUri = withFilePrefix(respondent.audioPath);
+        const info = await FileSystem.getInfoAsync(fileUri);
+        console.log(`[UploadService] audioPath="${fileUri}" exists=${info.exists}`);
         if (info.exists) {
-          formData.append('audio', {
-            uri: respondent.audioPath,
-            type: 'audio/m4a',
-            name: 'audio.m4a',
-          } as any);
+          const base64 = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          formData.append('audioData', base64);
+          console.log('[UploadService] audio adjuntado como base64');
+        } else {
+          console.warn('[UploadService] archivo de audio NO EXISTE en la ruta guardada');
         }
+      } else {
+        console.log('[UploadService] audioPath es null, no hay audio para adjuntar');
       }
 
-      await apiClient.post('/responses/submit', formData, {
+      const response = await apiClient.post('/responses/submit', formData, {
         timeout: 60000,
       });
+
+      console.log(`[UploadService] Respuesta del servidor para respondent ${respondent.id}:`, response.data);
 
       // Marcar como sincronizado
       await database.write(async () => {
@@ -157,8 +176,9 @@ export async function getLocalProgress(surveyLocalId: string): Promise<{
 async function deleteFileIfExists(filePath: string | null) {
   if (!filePath) return;
   try {
-    const info = await FileSystem.getInfoAsync(filePath);
-    if (info.exists) await FileSystem.deleteAsync(filePath, { idempotent: true });
+    const fileUri = withFilePrefix(filePath);
+    const info = await FileSystem.getInfoAsync(fileUri);
+    if (info.exists) await FileSystem.deleteAsync(fileUri, { idempotent: true });
   } catch (e) {
     console.warn('[UploadService] No se pudo borrar archivo:', filePath, e);
   }

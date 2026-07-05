@@ -12,6 +12,7 @@ import { dashboardController } from './controllers/dashboard'
 
 const app = new Elysia()
     .use(cors())
+    .get('/favicon.ico', () => new Response(null, { status: 204 }))
     .use(staticPlugin({
         assets: 'uploads',
         prefix: '/uploads'

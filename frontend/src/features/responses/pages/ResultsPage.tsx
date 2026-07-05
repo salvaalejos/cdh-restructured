@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { toast } from 'sonner';
 import { useResponses } from '../api/responseHooks';
 import { useSurveys } from '../../forms/api/formHooks';
 import { ResultsTable } from '../components/ResultsTable';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Users, Filter, Download } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
 // Fix Leaflet's default icon path issues with webpack/vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -47,6 +49,35 @@ export default function ResultsPage() {
         setSearchParams({ surveyId: String(id) });
     };
 
+    const apiUrl = import.meta.env.VITE_API_URL || ''
+
+    const downloadExcel = async () => {
+        try {
+            const token = useAuthStore.getState().token
+            const res = await fetch(`${apiUrl}/api/responses/export/${surveyId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Error al descargar el Excel' }))
+                throw new Error(err.error || 'Error al descargar el Excel')
+            }
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            const disposition = res.headers.get('Content-Disposition')
+            const filename = disposition?.match(/filename="?(.+?)"?$/)?.[1] || `resultados_${surveyId}.xlsx`
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            toast.success('Excel descargado correctamente')
+        } catch (error: any) {
+            toast.error(error.message || 'Error al descargar el Excel')
+        }
+    }
+
     // Calculate Map Center dynamically based on mapData
     const mapCenter = responseData?.mapData && responseData.mapData.length > 0
         ? [responseData.mapData[0].latitude, responseData.mapData[0].longitude] as [number, number]
@@ -78,7 +109,7 @@ export default function ResultsPage() {
                     {surveyId && (
                         <Button 
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                            onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/responses/export/${surveyId}`}
+                            onClick={() => downloadExcel()}
                         >
                             <Download className="w-4 h-4 mr-2" />
                             Exportar Excel

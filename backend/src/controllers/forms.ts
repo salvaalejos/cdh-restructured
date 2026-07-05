@@ -96,7 +96,6 @@ export const formsController = new Elysia({ prefix: '/forms' })
                 }
             }
 
-            // Handle multipart (survey JSON string + image files) or plain JSON
             let data: any;
             const imageFiles: Record<string, File> = {};
 
@@ -188,6 +187,17 @@ export const formsController = new Elysia({ prefix: '/forms' })
             console.error('Error creating survey:', error)
             set.status = 500
             return { error: 'Error interno del servidor al crear la encuesta' }
+        }
+    }, {
+        parse: async ({ request }: any) => {
+            const ct = request.headers.get('content-type') || '';
+            if (!ct.includes('multipart/form-data')) return;
+            const formData = await request.formData();
+            const obj: Record<string, any> = {};
+            for (const [key, value] of formData.entries()) {
+                obj[key] = value;
+            }
+            return obj;
         }
     })
     // PUT /api/forms/:id (Update Complex Survey)
@@ -316,6 +326,17 @@ export const formsController = new Elysia({ prefix: '/forms' })
             console.error('Error updating survey:', error)
             set.status = 500
             return { error: 'Error interno del servidor al actualizar la encuesta' }
+        }
+    }, {
+        parse: async ({ request }: any) => {
+            const ct = request.headers.get('content-type') || '';
+            if (!ct.includes('multipart/form-data')) return;
+            const formData = await request.formData();
+            const obj: Record<string, any> = {};
+            for (const [key, value] of formData.entries()) {
+                obj[key] = value;
+            }
+            return obj;
         }
     })
     // DELETE /api/forms/:id

@@ -547,4 +547,5 @@ const enhance = withObservables([], () => ({
     .observeCount(),
 }));
 
+// @ts-ignore
 export default enhance(DashboardInner) as React.ComponentType;

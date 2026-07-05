@@ -399,7 +399,7 @@ export default function FormBuilderPage() {
                                             {/* Options Editor */}
                                             {[2, 3, 4, 5].includes(q.typeId) && (
                                                 <div className="pl-6 sm:pl-10 border-l-2 border-accent/20 space-y-3 mt-4">
-                                                    <Label className="text-muted-foreground">Opciones de Respuesta (Columnas)</Label>
+                                                    <Label className="text-muted-foreground">Opciones de Respuesta (Filas)</Label>
                                                     {q.options.map((opt, oIndex) => (
                                                         <div key={oIndex} className="flex items-center gap-2">
                                                             <Input 
@@ -492,7 +492,7 @@ export default function FormBuilderPage() {
                                             {/* Matrix SubOptions Editor */}
                                             {[4, 5].includes(q.typeId) && (
                                                 <div className="pl-6 sm:pl-10 border-l-2 border-primary/20 space-y-3 mt-4">
-                                                    <Label className="text-muted-foreground">SubOpciones (Filas de la Matriz)</Label>
+                                                    <Label className="text-muted-foreground">SubOpciones (Columnas de la Matriz)</Label>
                                                     {q.subOptions.map((sub, sIndex) => (
                                                         <div key={sIndex} className="flex items-center gap-2">
                                                             <Input 
@@ -508,7 +508,7 @@ export default function FormBuilderPage() {
                                                     ))}
                                                     <div className="flex flex-wrap items-center gap-2 pt-2">
                                                         <Button variant="outline" size="sm" onClick={() => addSubOption(qIndex)} className="text-foreground hover:bg-primary/10 hover:text-primary font-medium">
-                                                            <Plus className="h-4 w-4 mr-2" /> Añadir Fila
+                                                            <Plus className="h-4 w-4 mr-2" /> Añadir Columna
                                                         </Button>
                                                         <span className="text-xs text-muted-foreground ml-2">Atajos:</span>
                                                         <Button variant="secondary" size="sm" onClick={() => quickAddSubOptions(qIndex, 'likert-text')} className="text-xs h-8">
