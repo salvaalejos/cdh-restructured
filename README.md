@@ -263,20 +263,28 @@ cdh-restructured/
 ### Diagrama de Relaciones
 
 ```
-User (1) ────< Assignment >──── (1) Survey
-  │                                  │
-  │                                  │
-  └────< Respondent >───────────────┘
-           │
-           └────< Answer >──── (1) Question
-                    │                  │
-                    ├──── (?) Option   │
-                    └──── (?) SubOption│
-                                       │
-                              Survey ──┘
-                              (1) ────< Question >──── (1) SubOption
-                                        │
-                                        └──── (1) Option
+erDiagram
+    %% Relaciones principales de Asignación y Respuesta
+    USER ||--o{ ASSIGNMENT : "tiene"
+    SURVEY ||--o{ ASSIGNMENT : "pertenece a"
+    
+    USER ||--o{ RESPONDENT : "actúa como"
+    SURVEY ||--o{ RESPONDENT : "es respondida por"
+    
+    %% Relaciones de las Respuestas
+    RESPONDENT ||--o{ ANSWER : "genera"
+    QUESTION ||--o{ ANSWER : "recibe"
+    
+    %% Opciones seleccionadas (Los (?) indican que es opcional 0..1)
+    ANSWER }o--o| OPTION : "selecciona (opcional)"
+    ANSWER }o--o| SUBOPTION : "selecciona (opcional)"
+    
+    %% Estructura de la Encuesta / Formulario
+    SURVEY ||--o{ QUESTION : "contiene"
+    
+    %% Diccionario de Opciones compartidas
+    OPTION ||--o{ QUESTION : "asignada a"
+    SUBOPTION ||--o{ QUESTION : "asignada a"
 ```
 
 ### Modelos
