@@ -262,29 +262,29 @@ cdh-restructured/
 
 ### Diagrama de Relaciones
 
-```
+```mermaid
 erDiagram
-    %% Relaciones principales de Asignación y Respuesta
-    USER ||--o{ ASSIGNMENT : "tiene"
-    SURVEY ||--o{ ASSIGNMENT : "pertenece a"
+    %% Relaciones de Asignación y Respondiente
+    User ||--o{ Assignment : "tiene"
+    Survey ||--o{ Assignment : "pertenece a"
     
-    USER ||--o{ RESPONDENT : "actúa como"
-    SURVEY ||--o{ RESPONDENT : "es respondida por"
+    User ||--o{ Respondent : "actúa como"
+    Survey ||--o{ Respondent : "es respondida por"
     
-    %% Relaciones de las Respuestas
-    RESPONDENT ||--o{ ANSWER : "genera"
-    QUESTION ||--o{ ANSWER : "recibe"
+    %% Relaciones de Respuestas
+    Respondent ||--o{ Answer : "genera"
+    Question ||--o{ Answer : "recibe"
     
-    %% Opciones seleccionadas (Los (?) indican que es opcional 0..1)
-    ANSWER }o--o| OPTION : "selecciona (opcional)"
-    ANSWER }o--o| SUBOPTION : "selecciona (opcional)"
+    %% Opciones (0..1 indica que es opcional)
+    Answer }o--o| Option : "selecciona (opcional)"
+    Answer }o--o| SubOption : "selecciona (opcional)"
     
-    %% Estructura de la Encuesta / Formulario
-    SURVEY ||--o{ QUESTION : "contiene"
+    %% Estructura de la Encuesta
+    Survey ||--o{ Question : "contiene"
     
-    %% Diccionario de Opciones compartidas
-    OPTION ||--o{ QUESTION : "asignada a"
-    SUBOPTION ||--o{ QUESTION : "asignada a"
+    %% Catálogo de Opciones
+    Option ||--o{ Question : "asignada a"
+    SubOption ||--o{ Question : "asignada a"
 ```
 
 ### Modelos
