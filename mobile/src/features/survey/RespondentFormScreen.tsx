@@ -42,6 +42,7 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
   const [ageText, setAgeText] = useState('');
   const [schooling, setSchooling] = useState<string | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const isValid = gender !== null && ageText.trim() !== '' && schooling !== null;
   const age = parseInt(ageText, 10);
@@ -98,6 +99,19 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
           onCancel={undefined}
         />
       )}
+
+      <CustomModal
+        visible={showCancelModal}
+        title="Cancelar Encuesta"
+        description="Se detendrá la grabación de audio y perderás todo el progreso. ¿Deseas continuar?"
+        type="destructive"
+        confirmText="Sí, Cancelar"
+        onConfirm={() => {
+          setShowCancelModal(false);
+          onBack();
+        }}
+        onCancel={() => setShowCancelModal(false)}
+      />
 
       {/* Header */}
       <View className="items-center mb-10">
@@ -223,7 +237,7 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
 
       <TouchableOpacity
         className="w-full py-4 rounded-2xl items-center justify-center border border-border"
-        onPress={onBack}
+        onPress={() => setShowCancelModal(true)}
         activeOpacity={0.7}
       >
         <Text className="text-muted-foreground font-semibold">Cancelar</Text>

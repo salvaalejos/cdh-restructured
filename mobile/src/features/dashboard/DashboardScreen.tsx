@@ -59,6 +59,7 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
   const [modalConfig, setModalConfig] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [progress, setProgress] = useState({ men: 0, women: 0, total: 0 });
 
@@ -110,7 +111,7 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
       } else if (result.type === 'no_assignment') {
         showInfoModal('Sin asignación', 'No tienes ninguna encuesta asignada actualmente. Contacta al administrador.');
       } else if (result.type === 'error') {
-        showErrorModal('Error de conexión', result.message);
+        showInfoModal('Sin conexión', `${result.message}. Verifica tu conexión a la red y vuelve a intentar.`);
       }
     } finally {
       setIsSyncing(false);
@@ -439,7 +440,7 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
       {/* Cerrar sesión */}
       <TouchableOpacity
         className="w-full bg-transparent py-4 rounded-2xl items-center justify-center flex-row border border-destructive/30 active:bg-destructive/10 mt-4"
-        onPress={logout}
+        onPress={() => setShowLogoutModal(true)}
       >
         <LogOut color="#EF4444" size={18} style={{ marginRight: 12 }} />
         <Text className="text-destructive font-bold text-sm tracking-wide">Cerrar Sesión</Text>
@@ -525,6 +526,33 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de confirmación de cerrar sesión */}
+      <CustomModal
+        visible={showLogoutModal}
+        title="Cerrar Sesión"
+        description="Se eliminarán todos los datos locales incluyendo encuestas descargadas, registros pendientes y archivos multimedia. ¿Deseas continuar?"
+        type="destructive"
+        confirmText="Sí, Cerrar Sesión"
+        onConfirm={async () => {
+          setShowLogoutModal(false);
+          await clearAllLocalData().catch(console.error);
+          useSurveyStore.setState({
+            isActive: false,
+            isTestMode: false,
+            isCancelled: false,
+            isLoading: false,
+            showForm: false,
+            currentIndex: 0,
+            questions: [],
+            answers: {},
+            activeRespondentId: null,
+            activeSurveyLocalId: null,
+          });
+          await logout();
+        }}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </View>
   );
 }

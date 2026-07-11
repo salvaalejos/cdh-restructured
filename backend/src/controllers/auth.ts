@@ -12,7 +12,7 @@ export const authController = new Elysia({ prefix: '/auth' })
         
         if (!user || !(await verifyPassword(password, user.password))) {
             set.status = 401
-            return { error: 'Invalid username or password' }
+            return { error: 'Usuario o contraseña incorrectos' }
         }
 
         // Transparently upgrade legacy Werkzeug hashes to modern Argon2id

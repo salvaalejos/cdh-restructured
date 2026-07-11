@@ -71,7 +71,7 @@ interface SurveyState {
   setAnswer: (questionId: string, answer: any) => Promise<void>;
   nextQuestion: () => void;
   prevQuestion: () => void;
-  cancelSurvey: () => void;
+  cancelSurvey: () => Promise<void>;
   endSurvey: (photoUri: string | null, audioUri: string | null) => Promise<void>;
 }
 
@@ -273,7 +273,10 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     );
     set({ showForm: true, isTestMode: options?.isTest ?? false });
   },
-  closeForm: () => set({ showForm: false }),
+  closeForm: async () => {
+    await AudioRecorderService.stopRecording().catch(console.error);
+    set({ showForm: false });
+  },
 
   // ── Iniciar encuesta REAL ─────────────────────────────────────────────────
   startRealSurvey: async ({ gender, age, schooling }) => {
@@ -412,54 +415,36 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     }),
 
   // ── Cancelar encuesta ─────────────────────────────────────────────────────
-  cancelSurvey: () => {
+  cancelSurvey: async () => {
     const state = get();
-    const newAnswers = { ...state.answers };
 
-    // Autocompletar preguntas no respondidas
-    for (let i = state.currentIndex; i < state.questions.length; i++) {
-      const q = state.questions[i];
-      if (!newAnswers[q.id]) {
-        if (q.typeId === 1) {
-          newAnswers[q.id] = 'Cancelada';
-        } else if (q.options && q.options.length > 0) {
-          newAnswers[q.id] = q.typeId === 2 ? q.options[0].id : [q.options[0].id];
-        } else if ([4, 5].includes(q.typeId) && q.options) {
-          const matAns: any = {};
-          q.options.forEach((opt) => {
-            matAns[opt.id] = q.typeId === 4 ? q.subOptions![0]?.id : [q.subOptions![0]?.id];
-          });
-          newAnswers[q.id] = matAns;
-        } else {
-          newAnswers[q.id] = 'Cancelada';
-        }
+    // Detener grabación de audio
+    await AudioRecorderService.stopRecording().catch(console.error);
+
+    // Borrar respondent incompleto si existe (solo encuestas reales)
+    if (!state.isTestMode && state.activeRespondentId) {
+      try {
+        const respondent = await database
+          .get<Respondent>('respondents')
+          .find(state.activeRespondentId);
+        await respondent.destroyPermanently();
+      } catch (e) {
+        console.error('[SurveyStore] Error borrando respondent cancelado:', e);
       }
     }
 
-    // Persistir las respuestas autocomplete si no es modo prueba
-    if (!state.isTestMode && state.activeRespondentId) {
-      const respondentId = state.activeRespondentId;
-      const questions = state.questions;
-      Object.entries(newAnswers).forEach(([qId, ans]) => {
-        const q = questions.find((q) => q.id === qId);
-        if (q) persistAnswer(respondentId, q, ans).catch(console.error);
-      });
-
-      // Marcar respondent como cancelado
-      database.write(async () => {
-        const respondent = await database
-          .get<Respondent>('respondents')
-          .find(respondentId);
-        await respondent.update((r) => {
-          r.isCancelled = true;
-        });
-      }).catch(console.error);
-    }
-
+    // Reset completo del store — vuelve al dashboard
     set({
-      isCancelled: true,
-      answers: newAnswers,
-      currentIndex: state.questions.length,
+      isActive: false,
+      isTestMode: false,
+      isCancelled: false,
+      isLoading: false,
+      showForm: false,
+      currentIndex: 0,
+      questions: [],
+      answers: {},
+      activeRespondentId: null,
+      activeSurveyLocalId: null,
     });
   },
 

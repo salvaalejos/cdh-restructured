@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { WifiOff } from 'lucide-react-native';
 import { useAuthStore } from './store';
 import { apiClient } from '../../api/client';
 
@@ -46,8 +47,15 @@ export default function LoginScreen() {
 
       <View className="bg-card p-6 rounded-2xl shadow-sm border border-border">
         {error ? (
-          <View className="bg-red-50 p-3 rounded-lg mb-4">
-            <Text className="text-danger text-sm text-center">{error}</Text>
+          <View className={`p-3 rounded-lg mb-4 flex-row items-center justify-center gap-2 ${
+            error === 'Conéctate a la red'
+              ? 'bg-amber-50 border border-amber-200'
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            {error === 'Conéctate a la red' && <WifiOff size={16} color="#D97706" />}
+            <Text className={`text-sm text-center font-medium ${
+              error === 'Conéctate a la red' ? 'text-amber-700' : 'text-red-600'
+            }`}>{error}</Text>
           </View>
         ) : null}
 
