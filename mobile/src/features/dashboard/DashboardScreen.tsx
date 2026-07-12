@@ -9,7 +9,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, Pressable, ActivityIndicator,
+  View, Text, TouchableOpacity, ActivityIndicator,
   Modal, ScrollView,
 } from 'react-native';
 import EmergencyPanel from './EmergencyPanel';
@@ -226,14 +226,13 @@ function DashboardInner({ localSurvey, completedCount }: DashboardInnerProps) {
       <DeleteProgressButton onDelete={handleDeleteAll} />
 
       {/* Cerrar sesión */}
-      <Pressable
-        className="w-full bg-transparent py-4 rounded-2xl items-center justify-center flex-row border border-destructive/30 mt-4"
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      <TouchableOpacity
+        className="w-full bg-transparent py-4 rounded-2xl items-center justify-center flex-row border border-destructive/30 active:bg-destructive/10 mt-4"
         onPress={() => setShowLogoutModal(true)}
       >
         <LogOut color="#EF4444" size={18} style={{ marginRight: 12 }} />
         <Text className="text-destructive font-bold text-sm tracking-wide">Cerrar Sesión</Text>
-      </Pressable>
+      </TouchableOpacity>
 
       <CustomModal
         visible={showLogoutModal}

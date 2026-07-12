@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, Pressable, TextInput,
+  View, Text, TouchableOpacity, TextInput,
   ScrollView, ActivityIndicator,
 } from 'react-native';
 import { User, Mars, Venus, GraduationCap, ArrowRight } from 'lucide-react-native';
@@ -142,28 +142,28 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
             const selectedBorder = g === 'Hombre' ? '#3B82F6' : '#EC4899';
 
             return (
-              <Pressable
+              <TouchableOpacity
                 key={g}
                 className="flex-1 py-5 rounded-2xl items-center justify-center border-2"
-                style={({ pressed }) => ({
-                  backgroundColor: isSelected ? selectedBg : '#1E293B',
-                  borderColor: isSelected ? selectedBorder : 'rgba(100, 116, 139, 0.3)',
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                style={{
+                  backgroundColor: isSelected ? selectedBg : 'transparent',
+                  borderColor: isSelected ? selectedBorder : '#1E293B',
+                }}
                 onPress={() => setGender(g)}
+                activeOpacity={0.8}
               >
                 <Icon
-                  color={isSelected ? selectedBorder : '#F8FAFC'}
+                  color={isSelected ? selectedBorder : '#64748B'}
                   size={28}
                   style={{ marginBottom: 6 }}
                 />
                 <Text
                   className="font-bold text-base"
-                  style={{ color: isSelected ? selectedBorder : '#F8FAFC' }}
+                  style={{ color: isSelected ? selectedBorder : '#64748B' }}
                 >
                   {g}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -196,51 +196,52 @@ export default function RespondentFormScreen({ onBack }: RespondentFormScreenPro
           {SCHOOLING_OPTIONS.map((opt) => {
             const isSelected = schooling === opt;
             return (
-              <Pressable
+              <TouchableOpacity
                 key={opt}
                 className="px-4 py-2 rounded-full border"
-                style={({ pressed }) => ({
-                  backgroundColor: isSelected ? 'rgba(59,130,246,0.15)' : '#1E293B',
-                  borderColor: isSelected ? '#3B82F6' : 'rgba(100, 116, 139, 0.3)',
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                style={{
+                  backgroundColor: isSelected ? 'rgba(59,130,246,0.15)' : 'transparent',
+                  borderColor: isSelected ? '#3B82F6' : '#1E293B',
+                }}
                 onPress={() => setSchooling(opt)}
+                activeOpacity={0.8}
               >
                 <Text
                   className="text-sm font-semibold"
-                  style={{ color: isSelected ? '#3B82F6' : '#F8FAFC' }}
+                  style={{ color: isSelected ? '#3B82F6' : '#64748B' }}
                 >
                   {opt}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             );
           })}
         </View>
       </View>
 
       {/* Actions */}
-      <Pressable
+      <TouchableOpacity
         className="w-full py-5 rounded-2xl flex-row items-center justify-center mb-4 shadow-lg"
-        style={({ pressed }) => ({
-          backgroundColor: isValid ? '#3B82F6' : 'rgba(100, 116, 139, 0.3)',
-          opacity: isValid ? (pressed ? 0.8 : 1) : 0.5,
-        })}
+        style={{
+          backgroundColor: isValid ? '#3B82F6' : '#1E293B',
+          opacity: isValid ? 1 : 0.5,
+        }}
         onPress={handleStart}
         disabled={!isValid}
+        activeOpacity={0.8}
       >
         <ArrowRight color="#F8FAFC" size={22} style={{ marginRight: 10 }} />
         <Text className="text-white font-black text-lg tracking-wide">
           Iniciar Encuesta
         </Text>
-      </Pressable>
+      </TouchableOpacity>
 
-      <Pressable
+      <TouchableOpacity
         className="w-full py-4 rounded-2xl items-center justify-center border border-border"
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         onPress={() => setShowCancelModal(true)}
+        activeOpacity={0.7}
       >
         <Text className="text-muted-foreground font-semibold">Cancelar</Text>
-      </Pressable>
+      </TouchableOpacity>
     </ScrollView>
   );
 }

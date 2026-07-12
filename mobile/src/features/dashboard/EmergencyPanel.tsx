@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, Pressable, TextInput,
+  View, Text, TouchableOpacity, TextInput,
   Modal, ActivityIndicator, ScrollView,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -139,9 +139,9 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
               <ShieldAlert color="#EF4444" size={22} style={{ marginRight: 10 }} />
               <Text className="text-foreground text-lg font-black">Panel de Emergencia</Text>
             </View>
-            <Pressable onPress={handleClose} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+            <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
               <X color="#64748B" size={24} />
-            </Pressable>
+            </TouchableOpacity>
           </View>
 
           {step === 'auth' ? (
@@ -163,12 +163,12 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
               {!!authError && (
                 <Text className="text-destructive text-sm mb-3 font-medium">{authError}</Text>
               )}
-              <Pressable
-                className="w-full bg-destructive py-4 rounded-xl items-center justify-center"
+              <TouchableOpacity
+                className="w-full bg-destructive py-4 rounded-xl items-center justify-center active:opacity-80"
                 onPress={handleAuth}
               >
                 <Text className="text-white font-black text-base">Ingresar</Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
           ) : (
             <ScrollView>
@@ -185,10 +185,9 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
 
               {!isWorking && (
                 <View style={{ gap: 12 }}>
-                  <Pressable
-                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
+                  <TouchableOpacity
+                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center active:opacity-80"
                     onPress={handleExportDB}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <View className="w-12 h-12 bg-primary/20 rounded-full items-center justify-center mr-4">
                       <Download color="#3B82F6" size={22} />
@@ -199,12 +198,11 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                         Guarda un respaldo JSON de todos los registros locales en el almacenamiento de la app.
                       </Text>
                     </View>
-                  </Pressable>
+                  </TouchableOpacity>
 
-                  <Pressable
-                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
+                  <TouchableOpacity
+                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center active:opacity-80"
                     onPress={handleRecoverProgress}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <View className="w-12 h-12 bg-accent/20 rounded-full items-center justify-center mr-4">
                       <RefreshCw color="#CA5D1E" size={22} />
@@ -215,7 +213,7 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                         Re-sincroniza la encuesta desde el servidor para restaurar el estado visible.
                       </Text>
                     </View>
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
               )}
             </ScrollView>

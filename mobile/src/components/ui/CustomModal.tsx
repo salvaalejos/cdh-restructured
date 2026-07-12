@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { AlertTriangle, Info, CheckCircle2, X } from 'lucide-react-native';
 
 export interface CustomModalProps {
@@ -56,13 +56,12 @@ export default function CustomModal({
 
           {/* Close Button (if cancel is provided) */}
           {onCancel && (
-            <Pressable 
-              className="absolute top-4 right-4 p-2 bg-secondary rounded-full"
+            <TouchableOpacity 
+              className="absolute top-4 right-4 p-2 bg-secondary rounded-full active:opacity-80"
               onPress={onCancel}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
             >
               <X color="#64748B" size={18} />
-            </Pressable>
+            </TouchableOpacity>
           )}
 
           {/* Content */}
@@ -81,25 +80,24 @@ export default function CustomModal({
           {/* Actions */}
           <View className="flex-row w-full mt-4 gap-4">
             {onCancel && (
-              <Pressable 
+              <TouchableOpacity 
                 className="flex-1 bg-transparent py-3.5 rounded-xl border border-border items-center justify-center active:bg-secondary"
                 onPress={onCancel}
               >
                 <Text className="text-muted-foreground font-bold tracking-wide">
                   {cancelText}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
             
-            <Pressable 
-              className={`flex-1 py-3.5 rounded-xl border items-center justify-center shadow-lg ${getConfirmStyle()}`}
+            <TouchableOpacity 
+              className={`flex-1 py-3.5 rounded-xl border items-center justify-center shadow-lg active:opacity-80 ${getConfirmStyle()}`}
               onPress={onConfirm}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
             >
               <Text className="text-white font-bold tracking-wide">
                 {confirmText}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
 
         </View>

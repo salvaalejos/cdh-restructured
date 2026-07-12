@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { usePermissions } from './usePermissions';
 import { Camera, Mic, MapPin, Bell, CheckCircle2, CircleDashed } from 'lucide-react-native';
 
@@ -120,15 +120,14 @@ export default function PermissionsScreen({ onComplete }: { onComplete: () => vo
 
       </View>
 
-      <Pressable 
-        className="w-full bg-primary py-4 rounded-xl items-center"
+      <TouchableOpacity 
+        className="w-full bg-primary py-4 rounded-xl items-center active:opacity-80"
         onPress={handleRequest}
-        style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
-        <Text className="text-primary-foreground font-bold text-base">
+        <Text className="text-white font-bold text-base">
           Habilitar Sensores
         </Text>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }
