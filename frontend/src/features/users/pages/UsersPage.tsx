@@ -76,6 +76,7 @@ export default function UsersPage() {
                     className="flex h-10 w-full sm:w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                     value={roleId}
                     onChange={handleRoleChange}
+                    aria-label="Filtrar por rol"
                 >
                     <option value="all">Todos los Roles</option>
                     <option value="1">Administradores</option>

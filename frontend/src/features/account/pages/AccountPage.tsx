@@ -102,7 +102,7 @@ export default function AccountPage() {
                             )}
                             <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white backdrop-blur-sm">
                                 <Upload className="w-6 h-6" />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} aria-label="Subir foto de perfil" />
                             </label>
                         </div>
                         <div>

@@ -336,11 +336,13 @@ export default function FormBuilderPage() {
                         <Input placeholder="Ej. Zona Centro, Estado de México" value={surveyLocation} onChange={e => setSurveyLocation(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                        <Label>Estado Inicial</Label>
+                        <Label htmlFor="survey-status-select">Estado Inicial</Label>
                         <select 
+                            id="survey-status-select"
                             className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                             value={status}
                             onChange={e => setStatus(e.target.value)}
+                            aria-label="Estado de la encuesta"
                         >
                             <option value="1">Activo</option>
                             <option value="0">Desactivado</option>
@@ -381,11 +383,13 @@ export default function FormBuilderPage() {
                                                     <Input placeholder="Escribe tu pregunta aquí..." value={q.text} onChange={e => updateQuestion(qIndex, 'text', e.target.value)} />
                                                 </div>
                                                 <div className="w-full sm:w-64 space-y-2">
-                                                    <Label>Tipo de Respuesta</Label>
+                                                    <Label htmlFor={`question-type-${qIndex}`}>Tipo de Respuesta</Label>
                                                     <select 
+                                                        id={`question-type-${qIndex}`}
                                                         className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                                                         value={q.typeId}
                                                         onChange={e => updateQuestion(qIndex, 'typeId', parseInt(e.target.value))}
+                                                        aria-label="Tipo de respuesta"
                                                     >
                                                         <option value="1">Abierta (Texto)</option>
                                                         <option value="2">Opción Única</option>
@@ -418,6 +422,7 @@ export default function FormBuilderPage() {
                                                                         className="absolute top-0 right-0 bg-destructive/80 text-white rounded-bl-sm p-0.5 hover:bg-destructive"
                                                                         onClick={() => removeImage(qIndex, oIndex)}
                                                                         title="Quitar imagen"
+                                                                        aria-label="Quitar imagen"
                                                                     >
                                                                         <X className="h-3 w-3" />
                                                                     </button>
@@ -429,6 +434,7 @@ export default function FormBuilderPage() {
                                                                         accept="image/*" 
                                                                         className="absolute inset-0 opacity-0 cursor-pointer w-10 h-10 z-10" 
                                                                         title="Añadir imagen (Max 3MB)"
+                                                                        aria-label="Añadir imagen"
                                                                         onChange={e => {
                                                                             const file = e.target.files?.[0];
                                                                             if (file) handleImageUpload(qIndex, oIndex, file);

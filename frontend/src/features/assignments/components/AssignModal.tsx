@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -23,14 +23,14 @@ export function AssignModal({ open, onOpenChange, selectedUserIds, onSuccess }: 
     const [menCount, setMenCount] = useState<string>('');
     const [womenCount, setWomenCount] = useState<string>('');
 
-    // Reset when opened
-    useEffect(() => {
-        if (open) {
+    const handleOpenChange = (newOpen: boolean) => {
+        if (newOpen) {
             setSurveyId('');
             setMenCount('');
             setWomenCount('');
         }
-    }, [open]);
+        onOpenChange(newOpen);
+    };
 
     const handleSubmit = () => {
         if (!surveyId) return toast.error('Selecciona una encuesta');
@@ -54,7 +54,7 @@ export function AssignModal({ open, onOpenChange, selectedUserIds, onSuccess }: 
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Asignar Encuesta Masivamente</DialogTitle>
@@ -72,11 +72,13 @@ export function AssignModal({ open, onOpenChange, selectedUserIds, onSuccess }: 
 
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
-                        <Label>Encuesta a Asignar</Label>
+                        <Label htmlFor="survey-assign-select">Encuesta a Asignar</Label>
                         <select 
+                            id="survey-assign-select"
                             className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                             value={surveyId}
                             onChange={(e) => setSurveyId(e.target.value)}
+                            aria-label="Seleccionar encuesta"
                         >
                             <option value="" disabled>Selecciona una encuesta...</option>
                             {surveysData?.data?.map(survey => (

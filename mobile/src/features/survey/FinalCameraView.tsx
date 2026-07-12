@@ -139,7 +139,7 @@ export default function FinalCameraView() {
               onPress={startCamera}
             >
               <Camera color="#F8FAFC" size={24} style={{ marginRight: 12 }} />
-              <Text className="text-primary-foreground font-bold text-lg tracking-wide">
+              <Text className="text-white font-bold text-lg tracking-wide">
                 Activar Cámara
               </Text>
             </TouchableOpacity>

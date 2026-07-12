@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Animated } from 'react-native';
 import { useSurveyStore, Question, Option } from './store';
-import { ArrowLeft, ArrowRight, XCircle } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, ArrowDown, XCircle } from 'lucide-react-native';
 import CustomModal from '../../components/ui/CustomModal';
 
 interface QuestionViewProps {
@@ -13,8 +13,37 @@ interface QuestionViewProps {
 export default function QuestionView({ question, index, total }: QuestionViewProps) {
   const { setAnswer, answers, nextQuestion, prevQuestion, cancelSurvey } = useSurveyStore();
   const [modalVisible, setModalVisible] = useState(false);
-  
+  const [showScrollArrow, setShowScrollArrow] = useState(false);
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+
   const currentAnswer = answers[question.id];
+
+  useEffect(() => {
+    if (showScrollArrow) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(arrowAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(arrowAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      arrowAnim.stopAnimation();
+      arrowAnim.setValue(0);
+    }
+  }, [showScrollArrow, arrowAnim]);
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    setShowScrollArrow(distanceFromBottom > 20);
+  };
+
+  const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
+    scrollRef.current?.measure((_x, _y, _width, height) => {
+      setShowScrollArrow(contentHeight > height + 20);
+    });
+  };
 
   const handleNext = () => {
     nextQuestion();
@@ -50,7 +79,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
       <CustomModal 
         visible={modalVisible}
         title="Cancelar Encuesta"
-        description="¿Estás seguro que deseas cancelar esta encuesta? Se marcará como incompleta y pasarás directamente a tomar la fotografía de evidencia."
+        description="¿Estás seguro que deseas cancelar esta encuesta? Se detendrá la grabación de audio y perderás todo el progreso de esta encuesta."
         type="destructive"
         confirmText="Sí, Cancelar"
         cancelText="No, continuar"
@@ -68,151 +97,151 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
         </View>
       </View>
 
-      {/* Question Text */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <Text className="text-foreground text-3xl font-black mb-8 leading-tight">
-          {question.text}
-        </Text>
+      {/* Question Text — fixed outside scroll */}
+      <Text className="text-foreground text-3xl font-black mb-6 leading-tight">
+        {question.text}
+      </Text>
 
-        {/* Dynamic Options Render based on TypeId */}
-        {question.typeId === 1 && (
-          <View className="bg-card border border-input rounded-xl p-2">
-            <TextInput
-              className="text-foreground text-lg p-4 min-h-[150px]"
-              placeholder="Escribe la respuesta aquí..."
-              placeholderTextColor="#64748B"
-              multiline
-              textAlignVertical="top"
-              value={currentAnswer || ''}
-              onChangeText={(text) => setAnswer(question.id, text)}
-            />
-          </View>
-        )}
+      {/* Scrollable content area */}
+      <View className="flex-1">
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          onContentSizeChange={handleContentSizeChange}
+          scrollEventThrottle={16}
+        >
+          {/* Type 1: Open text */}
+          {question.typeId === 1 && (
+            <View className="bg-card border border-input rounded-xl p-2">
+              <TextInput
+                className="text-foreground text-lg p-4 min-h-[150px]"
+                placeholder="Escribe la respuesta aquí..."
+                placeholderTextColor="#64748B"
+                multiline
+                textAlignVertical="top"
+                value={currentAnswer || ''}
+                onChangeText={(text) => setAnswer(question.id, text)}
+              />
+            </View>
+          )}
 
-        {[2, 3].includes(question.typeId) && question.options && (
-          <View className="space-y-4">
-            {question.options.map((opt: Option) => {
-              const isSelected = question.typeId === 2 
-                ? currentAnswer === opt.id 
-                : (Array.isArray(currentAnswer) && currentAnswer.includes(opt.id));
-              
-              const hasImage = !!opt.image;
+          {/* Type 2/3: Single or multiple choice */}
+          {[2, 3].includes(question.typeId) && question.options && (
+            <View className="space-y-4">
+              {question.options.map((opt: Option) => {
+                const isSelected = question.typeId === 2 
+                  ? currentAnswer === opt.id 
+                  : (Array.isArray(currentAnswer) && currentAnswer.includes(opt.id));
+                
+                const hasImage = !!opt.image;
 
-              return (
-                <TouchableOpacity
-                  key={opt.id}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    try {
-                      console.log('Selecting option:', opt.id, 'for question:', question.id);
-                      if (question.typeId === 2) {
-                        console.log('Setting single choice answer');
-                        setAnswer(question.id, opt.id);
-                      } else {
-                        console.log('Setting multiple choice answer');
-                        const curr = Array.isArray(currentAnswer) ? currentAnswer : [];
-                        if (curr.includes(opt.id)) {
-                          setAnswer(question.id, curr.filter((id: string) => id !== opt.id));
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      try {
+                        if (question.typeId === 2) {
+                          setAnswer(question.id, opt.id);
                         } else {
-                          setAnswer(question.id, [...curr, opt.id]);
+                          const curr = Array.isArray(currentAnswer) ? currentAnswer : [];
+                          if (curr.includes(opt.id)) {
+                            setAnswer(question.id, curr.filter((id: string) => id !== opt.id));
+                          } else {
+                            setAnswer(question.id, [...curr, opt.id]);
+                          }
                         }
+                      } catch (error) {
+                        console.error('Error selecting option:', error);
                       }
-                      console.log('Successfully set answer');
-                    } catch (error) {
-                      console.error('Error selecting option:', error);
-                    }
-                  }}
-                  className="border-2 rounded-2xl mb-4 overflow-hidden shadow-sm w-full"
-                  style={{
-                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#FFFFFF',
-                    borderColor: isSelected ? '#3B82F6' : '#E2E8F0'
-                  }}
-                >
-                  {hasImage && (
-                    <Image 
-                      source={{ uri: opt.image }} 
-                      className="w-full h-48 bg-secondary rounded-t-xl"
-                      resizeMode="contain" 
-                    />
-                  )}
-                  
-                  <View className="p-4 flex-row items-center">
-                    <View 
-                      className={`w-5 h-5 border-2 mr-3 items-center justify-center ${question.typeId === 3 ? 'rounded-md' : 'rounded-full'}`}
-                      style={{
-                        borderColor: isSelected ? '#3B82F6' : '#64748B',
-                        backgroundColor: isSelected ? '#3B82F6' : 'transparent'
-                      }}
-                    >
-                      {isSelected && <View className="w-2.5 h-2.5 bg-background rounded-full" />}
-                    </View>
-                    <Text 
-                      className="text-lg font-bold flex-1"
-                      style={{ color: isSelected ? '#3B82F6' : '#1E293B' }}
-                    >
-                      {opt.text}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {[4, 5].includes(question.typeId) && question.options && question.subOptions && (
-          <View className="bg-card border border-border rounded-2xl overflow-hidden">
-            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-              <View>
-                {/* Header Row */}
-                <View className="flex-row bg-secondary/50 border-b border-border">
-                  <View className="w-28 p-3 justify-center">
-                    <Text className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Ítem</Text>
-                  </View>
-                  {question.subOptions.map((subOpt) => (
-                    <View key={subOpt.id} className="w-28 items-center justify-center p-2 border-l border-border">
-                      <Text
-                        className="text-foreground text-xs font-bold text-center leading-tight"
-                        numberOfLines={2}
+                    }}
+                    className="border-2 rounded-2xl mb-4 overflow-hidden shadow-sm w-full"
+                    style={{
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#FFFFFF',
+                      borderColor: isSelected ? '#3B82F6' : '#E2E8F0'
+                    }}
+                  >
+                    {hasImage && (
+                      <Image 
+                        source={{ uri: opt.image }} 
+                        className="w-full h-48 bg-secondary rounded-t-xl"
+                        resizeMode="contain" 
+                      />
+                    )}
+                    
+                    <View className="p-4 flex-row items-center">
+                      <View 
+                        className={`w-5 h-5 border-2 mr-3 items-center justify-center ${question.typeId === 3 ? 'rounded-md' : 'rounded-full'}`}
+                        style={{
+                          borderColor: isSelected ? '#3B82F6' : '#64748B',
+                          backgroundColor: isSelected ? '#3B82F6' : 'transparent'
+                        }}
                       >
-                        {subOpt.text}
+                        {isSelected && <View className="w-2.5 h-2.5 bg-background rounded-full" />}
+                      </View>
+                      <Text 
+                        className="text-lg font-bold flex-1"
+                        style={{ color: isSelected ? '#3B82F6' : '#1E293B' }}
+                      >
+                        {opt.text}
                       </Text>
                     </View>
-                  ))}
-                </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-                {/* Data Rows */}
-                {question.options.map((opt, oi) => {
-                  const hasImage = !!opt.image;
-                  const currentOptAnswer = currentAnswer?.[opt.id];
-                  return (
-                    <View
-                      key={opt.id}
-                      className={`flex-row items-stretch ${oi < question.options!.length - 1 ? 'border-b border-border' : ''}`}
-                    >
-                      <View className="w-28 p-3 justify-center">
-                        {hasImage && (
-                          <Image
-                            source={{ uri: opt.image }}
-                            className="w-full h-14 rounded-lg mb-1 bg-secondary"
-                            resizeMode="contain"
-                          />
-                        )}
-                        <Text className="text-foreground text-sm font-bold leading-tight" numberOfLines={3}>
-                          {opt.text}
-                        </Text>
+          {/* Type 4/5: Matrix — vertical cards */}
+          {[4, 5].includes(question.typeId) && question.options && question.subOptions && (
+            <View>
+              {question.options.map((opt) => {
+                const hasImage = !!opt.image;
+                const currentOptAnswer = currentAnswer?.[opt.id];
+                const hasSelection = question.typeId === 4
+                  ? !!currentOptAnswer
+                  : (Array.isArray(currentOptAnswer) && currentOptAnswer.length > 0);
+
+                return (
+                  <View
+                    key={opt.id}
+                    className="border-2 rounded-2xl mb-4 overflow-hidden"
+                    style={{
+                      backgroundColor: hasSelection ? 'rgba(59, 130, 246, 0.05)' : '#FFFFFF',
+                      borderColor: hasSelection ? '#3B82F6' : '#E2E8F0'
+                    }}
+                  >
+                    {/* Option text */}
+                    <View className="px-5 pt-4 pb-3">
+                      <Text className="text-foreground text-lg font-bold leading-tight">
+                        {opt.text}
+                      </Text>
+                    </View>
+
+                    {/* Option image — between text and sub-options */}
+                    {hasImage && (
+                      <View className="px-5 pb-3">
+                        <Image
+                          source={{ uri: opt.image }}
+                          className="w-full h-40 rounded-xl bg-secondary"
+                          resizeMode="contain"
+                        />
                       </View>
+                    )}
+
+                    {/* Sub-options — vertical list */}
+                    <View className="px-5 pb-4">
                       {question.subOptions!.map((subOpt) => {
-                        const isSelected = question.typeId === 4
+                        const isSubSelected = question.typeId === 4
                           ? currentOptAnswer === subOpt.id
                           : (Array.isArray(currentOptAnswer) && currentOptAnswer.includes(subOpt.id));
 
                         return (
                           <TouchableOpacity
                             key={subOpt.id}
-                            className="w-28 items-center justify-center p-3 border-l border-border"
-                            style={{
-                              backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                            }}
+                            activeOpacity={0.7}
                             onPress={() => {
                               if (question.typeId === 4) {
                                 const newState = { ...(currentAnswer || {}), [opt.id]: subOpt.id };
@@ -226,30 +255,56 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                                 setAnswer(question.id, newState);
                               }
                             }}
+                            className="flex-row items-center py-3 border-b border-border"
+                            style={{ borderBottomWidth: 1 }}
                           >
                             <View
-                              className={`w-6 h-6 border-2 items-center justify-center ${question.typeId === 5 ? 'rounded-md' : 'rounded-full'}`}
+                              className={`w-6 h-6 border-2 items-center justify-center mr-4 ${question.typeId === 5 ? 'rounded-md' : 'rounded-full'}`}
                               style={{
-                                borderColor: isSelected ? '#3B82F6' : '#64748B',
-                                backgroundColor: isSelected ? '#3B82F6' : 'transparent'
+                                borderColor: isSubSelected ? '#3B82F6' : '#64748B',
+                                backgroundColor: isSubSelected ? '#3B82F6' : 'transparent'
                               }}
                             >
-                              {isSelected && (
+                              {isSubSelected && (
                                 <View className={`${question.typeId === 5 ? 'w-3.5 h-3.5 bg-white rounded-sm' : 'w-3 h-3 bg-white rounded-full'}`} />
                               )}
                             </View>
+                            <Text
+                              className="text-base flex-1"
+                              style={{ color: isSubSelected ? '#3B82F6' : '#1E293B' }}
+                            >
+                              {subOpt.text}
+                            </Text>
                           </TouchableOpacity>
                         );
                       })}
                     </View>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          <View className="h-4" />
+        </ScrollView>
+
+        {/* Animated down arrow — shows when content overflows */}
+        {showScrollArrow && (
+          <Animated.View
+            className="absolute bottom-2 left-0 right-0 items-center"
+            style={{
+              opacity: arrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+              transform: [{
+                translateY: arrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
+              }]
+            }}
+          >
+            <View className="bg-card/90 border border-border rounded-full px-4 py-2 shadow-lg" style={{ elevation: 6 }}>
+              <ArrowDown color="#3B82F6" size={20} />
+            </View>
+          </Animated.View>
         )}
-        <View className="h-10" />
-      </ScrollView>
+      </View>
 
       {/* Footer Navigation */}
       <View className="flex-row items-center justify-between pt-4 border-t border-border">
@@ -275,8 +330,8 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
         <TouchableOpacity 
           className="w-14 h-14 rounded-xl items-center justify-center border"
           style={{
-            backgroundColor: isNextDisabled ? '#F1F5F9' : '#3B82F6', // bg-muted : bg-primary
-            borderColor: isNextDisabled ? 'rgba(100, 116, 139, 0.3)' : '#3B82F6', // border-muted-foreground/30 : border-primary
+            backgroundColor: isNextDisabled ? '#F1F5F9' : '#3B82F6',
+            borderColor: isNextDisabled ? 'rgba(100, 116, 139, 0.3)' : '#3B82F6',
             opacity: isNextDisabled ? 0.5 : 1,
             shadowColor: isNextDisabled ? 'transparent' : '#3B82F6',
             shadowOffset: { width: 0, height: 4 },

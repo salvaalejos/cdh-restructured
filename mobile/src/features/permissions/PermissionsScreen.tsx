@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { usePermissions } from './usePermissions';
 import { Camera, Mic, MapPin, Bell, CheckCircle2, CircleDashed } from 'lucide-react-native';
 
+const isGranted = (status: string) => status === 'granted';
+
 export default function PermissionsScreen({ onComplete }: { onComplete: () => void }) {
   const { permissions, isChecking, requestAllPermissions, checkPermissions } = usePermissions();
 
@@ -18,7 +20,7 @@ export default function PermissionsScreen({ onComplete }: { onComplete: () => vo
     if (permissions.allGranted) {
       onComplete();
     }
-  }, [permissions.allGranted]);
+  }, [permissions.allGranted, onComplete]);
 
   if (isChecking) {
     return (
@@ -32,8 +34,6 @@ export default function PermissionsScreen({ onComplete }: { onComplete: () => vo
   if (permissions.allGranted) {
     return null;
   }
-
-  const isGranted = (status: string) => status === 'granted';
 
   return (
     <View className="flex-1 bg-background justify-center px-6">
@@ -124,7 +124,7 @@ export default function PermissionsScreen({ onComplete }: { onComplete: () => vo
         className="w-full bg-primary py-4 rounded-xl items-center active:opacity-80"
         onPress={handleRequest}
       >
-        <Text className="text-primary-foreground font-bold text-base">
+        <Text className="text-white font-bold text-base">
           Habilitar Sensores
         </Text>
       </TouchableOpacity>

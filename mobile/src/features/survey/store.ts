@@ -71,7 +71,7 @@ interface SurveyState {
   setAnswer: (questionId: string, answer: any) => Promise<void>;
   nextQuestion: () => void;
   prevQuestion: () => void;
-  cancelSurvey: () => void;
+  cancelSurvey: () => Promise<void>;
   endSurvey: (photoUri: string | null, audioUri: string | null) => Promise<void>;
 }
 
@@ -83,20 +83,12 @@ async function loadQuestionsFromDB(surveyLocalId: string): Promise<UIQuestion[]>
     .query(Q.where('survey_id', surveyLocalId), Q.sortBy('server_id', Q.asc))
     .fetch();
 
-  const uiQuestions: UIQuestion[] = [];
-
-  for (const q of rawQuestions) {
-    const rawOptions = await database
-      .get<Option>('options')
-      .query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc))
-      .fetch();
-
-    const rawSubs = await database
-      .get<SubOption>('sub_options')
-      .query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc))
-      .fetch();
-
-    uiQuestions.push({
+  const uiQuestions = await Promise.all(rawQuestions.map(async (q) => {
+    const [rawOptions, rawSubs] = await Promise.all([
+      database.get<Option>('options').query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc)).fetch(),
+      database.get<SubOption>('sub_options').query(Q.where('question_id', q.id), Q.sortBy('server_id', Q.asc)).fetch(),
+    ]);
+    return {
       id: q.id,
       serverId: q.serverId,
       text: q.text,
@@ -112,8 +104,8 @@ async function loadQuestionsFromDB(surveyLocalId: string): Promise<UIQuestion[]>
         serverId: s.serverId,
         text: s.text,
       })),
-    });
-  }
+    };
+  }));
 
   return uiQuestions;
 }
@@ -151,6 +143,9 @@ async function persistAnswer(
     // Construir nuevas filas
     const createOps: any[] = [];
 
+    const optionMap = new Map(question.options?.map(o => [o.id, o]) ?? []);
+    const subOptionMap = new Map(question.subOptions?.map(s => [s.id, s]) ?? []);
+
     if (question.typeId === 1) {
       // Abierta
       createOps.push(
@@ -167,7 +162,7 @@ async function persistAnswer(
       );
     } else if (question.typeId === 2) {
       // Única: answer es el local option id
-      const opt = question.options?.find((o) => o.id === answer);
+      const opt = optionMap.get(answer);
       if (opt) {
         createOps.push(
           answersCollection.prepareCreate((a: Answer) => {
@@ -186,7 +181,7 @@ async function persistAnswer(
       // Múltiple: answer es string[] de local option ids
       const selectedIds: string[] = Array.isArray(answer) ? answer : [];
       for (const optLocalId of selectedIds) {
-        const opt = question.options?.find((o) => o.id === optLocalId);
+        const opt = optionMap.get(optLocalId);
         if (opt) {
           createOps.push(
             answersCollection.prepareCreate((a: Answer) => {
@@ -206,8 +201,8 @@ async function persistAnswer(
       // Matriz única: answer es Record<optLocalId, subLocalId>
       const matrixAns: Record<string, string> = answer ?? {};
       for (const [optLocalId, subLocalId] of Object.entries(matrixAns)) {
-        const opt = question.options?.find((o) => o.id === optLocalId);
-        const sub = question.subOptions?.find((s) => s.id === subLocalId);
+        const opt = optionMap.get(optLocalId);
+        const sub = subOptionMap.get(subLocalId);
         if (opt && sub) {
           createOps.push(
             answersCollection.prepareCreate((a: Answer) => {
@@ -227,9 +222,9 @@ async function persistAnswer(
       // Matriz múltiple: answer es Record<optLocalId, subLocalId[]>
       const matrixAns: Record<string, string[]> = answer ?? {};
       for (const [optLocalId, subLocalIds] of Object.entries(matrixAns)) {
-        const opt = question.options?.find((o) => o.id === optLocalId);
+        const opt = optionMap.get(optLocalId);
         for (const subLocalId of subLocalIds ?? []) {
-          const sub = question.subOptions?.find((s) => s.id === subLocalId);
+          const sub = subOptionMap.get(subLocalId);
           if (opt && sub) {
             createOps.push(
               answersCollection.prepareCreate((a: Answer) => {
@@ -273,7 +268,10 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     );
     set({ showForm: true, isTestMode: options?.isTest ?? false });
   },
-  closeForm: () => set({ showForm: false }),
+  closeForm: async () => {
+    await AudioRecorderService.stopRecording().catch(console.error);
+    set({ showForm: false });
+  },
 
   // ── Iniciar encuesta REAL ─────────────────────────────────────────────────
   startRealSurvey: async ({ gender, age, schooling }) => {
@@ -412,54 +410,38 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     }),
 
   // ── Cancelar encuesta ─────────────────────────────────────────────────────
-  cancelSurvey: () => {
+  cancelSurvey: async () => {
     const state = get();
-    const newAnswers = { ...state.answers };
 
-    // Autocompletar preguntas no respondidas
-    for (let i = state.currentIndex; i < state.questions.length; i++) {
-      const q = state.questions[i];
-      if (!newAnswers[q.id]) {
-        if (q.typeId === 1) {
-          newAnswers[q.id] = 'Cancelada';
-        } else if (q.options && q.options.length > 0) {
-          newAnswers[q.id] = q.typeId === 2 ? q.options[0].id : [q.options[0].id];
-        } else if ([4, 5].includes(q.typeId) && q.options) {
-          const matAns: any = {};
-          q.options.forEach((opt) => {
-            matAns[opt.id] = q.typeId === 4 ? q.subOptions![0]?.id : [q.subOptions![0]?.id];
-          });
-          newAnswers[q.id] = matAns;
-        } else {
-          newAnswers[q.id] = 'Cancelada';
-        }
+    // Detener grabación de audio
+    await AudioRecorderService.stopRecording().catch(console.error);
+
+    // Borrar respondent incompleto si existe (solo encuestas reales)
+    if (!state.isTestMode && state.activeRespondentId) {
+      try {
+        await database.write(async () => {
+          const respondent = await database
+            .get<Respondent>('respondents')
+            .find(state.activeRespondentId);
+          await respondent.destroyPermanently();
+        });
+      } catch (e) {
+        console.error('[SurveyStore] Error borrando respondent cancelado:', e);
       }
     }
 
-    // Persistir las respuestas autocomplete si no es modo prueba
-    if (!state.isTestMode && state.activeRespondentId) {
-      const respondentId = state.activeRespondentId;
-      const questions = state.questions;
-      Object.entries(newAnswers).forEach(([qId, ans]) => {
-        const q = questions.find((q) => q.id === qId);
-        if (q) persistAnswer(respondentId, q, ans).catch(console.error);
-      });
-
-      // Marcar respondent como cancelado
-      database.write(async () => {
-        const respondent = await database
-          .get<Respondent>('respondents')
-          .find(respondentId);
-        await respondent.update((r) => {
-          r.isCancelled = true;
-        });
-      }).catch(console.error);
-    }
-
+    // Reset completo del store — vuelve al dashboard
     set({
-      isCancelled: true,
-      answers: newAnswers,
-      currentIndex: state.questions.length,
+      isActive: false,
+      isTestMode: false,
+      isCancelled: false,
+      isLoading: false,
+      showForm: false,
+      currentIndex: 0,
+      questions: [],
+      answers: {},
+      activeRespondentId: null,
+      activeSurveyLocalId: null,
     });
   },
 

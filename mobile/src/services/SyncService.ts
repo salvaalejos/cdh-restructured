@@ -138,10 +138,12 @@ export async function forceDownload(): Promise<SyncStatus> {
 /** Elimina toda la campaña local y sus registros (preguntas, opciones, respondentes). */
 export async function clearLocalSurvey() {
   await database.write(async () => {
-    const surveys = await database.get<Survey>('surveys').query().fetch();
-    const questions = await database.get<Question>('questions').query().fetch();
-    const options = await database.get<Option>('options').query().fetch();
-    const subOptions = await database.get<SubOption>('sub_options').query().fetch();
+    const [surveys, questions, options, subOptions] = await Promise.all([
+      database.get<Survey>('surveys').query().fetch(),
+      database.get<Question>('questions').query().fetch(),
+      database.get<Option>('options').query().fetch(),
+      database.get<SubOption>('sub_options').query().fetch(),
+    ]);
 
     // WatermelonDB: marcar para borrar en batch
     const toDestroy = [
@@ -166,25 +168,25 @@ export async function clearAllLocalData() {
   }
 
   // 2. Borrar archivos multimedia individuales
-  for (const path of mediaPaths) {
+  await Promise.all(mediaPaths.map(async (path) => {
     try {
       const info = await FileSystem.getInfoAsync(path);
       if (info.exists) await FileSystem.deleteAsync(path, { idempotent: true });
     } catch (e) {
       console.warn('[SyncService] No se pudo borrar archivo:', path, e);
     }
-  }
+  }));
 
   // 3. Borrar directorios completos de opciones y audios
   const dirs = ['options/', 'audios/'].map(d => FileSystem.documentDirectory + d);
-  for (const dir of dirs) {
+  await Promise.all(dirs.map(async (dir) => {
     try {
       const info = await FileSystem.getInfoAsync(dir);
       if (info.exists) await FileSystem.deleteAsync(dir, { idempotent: true });
     } catch (e) {
       console.warn('[SyncService] No se pudo borrar directorio:', dir, e);
     }
-  }
+  }));
 
   // 4. Borrar TODOS los registros de todas las tablas (orden inverso de dependencias)
   await database.write(async () => {
@@ -211,13 +213,19 @@ async function performDownload(
 ) {
   // Pre-descargar imágenes de opciones antes del batch de DB
   const optionImageMap: Record<string, string> = {};
+  const allImageDownloads: Promise<{ id: number; path: string }>[] = [];
   for (const q of survey.questions ?? []) {
     for (const opt of q.options ?? []) {
       if (opt.image && typeof opt.image === 'string' && !opt.image.startsWith('data:')) {
-        const localPath = await downloadOptionImage(opt.image, opt.id);
-        optionImageMap[`${opt.id}`] = localPath;
+        allImageDownloads.push(
+          downloadOptionImage(opt.image, opt.id).then((path) => ({ id: opt.id, path }))
+        );
       }
     }
+  }
+  const imageResults = await Promise.all(allImageDownloads);
+  for (const { id, path } of imageResults) {
+    optionImageMap[`${id}`] = path;
   }
 
   await database.write(async () => {
@@ -240,33 +248,45 @@ async function performDownload(
       s.syncedAt = new Date().toISOString();
     });
 
-    for (const q of survey.questions ?? []) {
-      const localQuestion = await questionsCollection.create((lq) => {
-        // @ts-ignore WatermelonDB internal setter
-        lq._raw.survey_id = localSurvey.id;
-        lq.serverId = q.id;
-        lq.text = q.text;
-        lq.typeId = q.typeId;
-      });
+    const questions = survey.questions ?? [];
+    const createdQuestions = await Promise.all(
+      questions.map((q) =>
+        questionsCollection.create((lq) => {
+          // @ts-ignore WatermelonDB internal setter
+          lq._raw.survey_id = localSurvey.id;
+          lq.serverId = q.id;
+          lq.text = q.text;
+          lq.typeId = q.typeId;
+        })
+      )
+    );
 
+    const childOps: Promise<any>[] = [];
+    questions.forEach((q, idx) => {
+      const localQuestion = createdQuestions[idx];
       for (const opt of q.options ?? []) {
-        await optionsCollection.create((lo) => {
-          // @ts-ignore
-          lo._raw.question_id = localQuestion.id;
-          lo.serverId = opt.id;
-          lo.text = opt.text;
-          lo.image = optionImageMap[`${opt.id}`] ?? (opt.image?.startsWith('data:') ? null : opt.image ?? null);
-        });
+        childOps.push(
+          optionsCollection.create((lo) => {
+            // @ts-ignore
+            lo._raw.question_id = localQuestion.id;
+            lo.serverId = opt.id;
+            lo.text = opt.text;
+            lo.image = optionImageMap[`${opt.id}`] ?? (opt.image?.startsWith('data:') ? null : opt.image ?? null);
+          })
+        );
       }
-
       for (const sub of q.subOptions ?? []) {
-        await subOptionsCollection.create((ls) => {
-          // @ts-ignore
-          ls._raw.question_id = localQuestion.id;
-          ls.serverId = sub.id;
-          ls.text = sub.text;
-        });
+        childOps.push(
+          subOptionsCollection.create((ls) => {
+            // @ts-ignore
+            ls._raw.question_id = localQuestion.id;
+            ls.serverId = sub.id;
+            ls.text = sub.text;
+          })
+        );
       }
-    }
+    });
+
+    await Promise.all(childOps);
   });
 }

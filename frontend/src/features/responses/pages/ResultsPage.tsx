@@ -99,6 +99,7 @@ export default function ResultsPage() {
                         className="flex h-10 w-full sm:w-72 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         value={surveyId || ''}
                         onChange={(e) => handleSurveyChange(parseInt(e.target.value))}
+                        aria-label="Seleccionar encuesta"
                     >
                         <option value="" disabled>Selecciona una encuesta...</option>
                         {surveysData?.data?.map(survey => (
@@ -147,11 +148,13 @@ export default function ResultsPage() {
                             <Input type="number" placeholder="Ej. 25" value={age} onChange={e => {setAge(e.target.value); setPage(1)}} />
                         </div>
                         <div className="flex-1 min-w-[150px]">
-                            <Label className="mb-2 block">Género</Label>
+                            <Label htmlFor="gender-filter" className="mb-2 block">Género</Label>
                             <select 
+                                id="gender-filter"
                                 className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                                 value={gender}
                                 onChange={e => {setGender(e.target.value); setPage(1)}}
+                                aria-label="Filtrar por género"
                             >
                                 <option value="">Todos</option>
                                 <option value="Hombre">Hombre</option>

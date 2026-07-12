@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 // La URL se configura en el archivo .env del proyecto.
 // Desarrollo: http://10.0.2.2:3000/api (alias del emulador Android a localhost)
 // Producción: http://<IP_VPS>:3000/api (cambiar en .env)
-export const API_BASE_URL = process.env.API_BASE_URL ?? 'http://10.0.2.2:3000/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://10.0.2.2:3000/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -37,8 +37,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Extraer el mensaje de error del backend si existe
-    const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error de conexión con el servidor';
+    // Sin respuesta del servidor = problema de red/conexión
+    if (!error.response) {
+      return Promise.reject(new Error('Conéctate a la red'));
+    }
+    // El servidor respondió con error — extraer mensaje
+    const errorMessage = error.response.data?.error || error.response.data?.message || 'Error del servidor';
     return Promise.reject(new Error(errorMessage));
   }
 );

@@ -60,6 +60,7 @@ export function AssignmentsTable({ surveyors, selectedIds, onSelect, onSelectAll
                                 className="w-4 h-4 accent-primary cursor-pointer"
                                 checked={allSelected}
                                 onChange={(e) => onSelectAll(e.target.checked)}
+                                aria-label="Seleccionar todos"
                             />
                         </TableHead>
                         <TableHead className="cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('name')}>
@@ -97,6 +98,7 @@ export function AssignmentsTable({ surveyors, selectedIds, onSelect, onSelectAll
                                             className="w-4 h-4 accent-primary cursor-pointer"
                                             checked={selectedIds.includes(surveyor.id)}
                                             onChange={() => onSelect(surveyor.id)}
+                                            aria-label={`Seleccionar ${surveyor.name}`}
                                         />
                                     </TableCell>
                                     <TableCell>

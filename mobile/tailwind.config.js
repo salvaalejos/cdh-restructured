@@ -30,12 +30,20 @@ module.exports = {
           DEFAULT: "#1E293B",
           foreground: "#F8FAFC",
         },
+        success: {
+          DEFAULT: "#10B981",
+          foreground: "#020817",
+        },
         popover: {
           DEFAULT: "#020817",
           foreground: "#F8FAFC",
         },
         card: {
           DEFAULT: "#020817",
+          foreground: "#F8FAFC",
+        },
+        elevated: {
+          DEFAULT: "#0F172A",
           foreground: "#F8FAFC",
         },
       }

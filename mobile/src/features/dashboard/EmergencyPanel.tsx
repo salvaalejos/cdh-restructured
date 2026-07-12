@@ -20,7 +20,10 @@ import { syncAssignment } from '../../services/SyncService';
 import { X, ShieldAlert, Download, RefreshCw } from 'lucide-react-native';
 import CustomModal from '../../components/ui/CustomModal';
 
-const EMERGENCY_PASSWORD = process.env.EMERGENCY_PASSWORD ?? 'cdh2026admin';
+if (!process.env.EXPO_PUBLIC_EMERGENCY_PASSWORD) {
+  throw new Error('[EmergencyPanel] EXPO_PUBLIC_EMERGENCY_PASSWORD env var is not set');
+}
+const EMERGENCY_PASSWORD = process.env.EXPO_PUBLIC_EMERGENCY_PASSWORD;
 
 interface EmergencyPanelProps {
   visible: boolean;
@@ -161,7 +164,7 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                 <Text className="text-destructive text-sm mb-3 font-medium">{authError}</Text>
               )}
               <TouchableOpacity
-                className="w-full bg-destructive py-4 rounded-xl items-center justify-center"
+                className="w-full bg-destructive py-4 rounded-xl items-center justify-center active:opacity-80"
                 onPress={handleAuth}
               >
                 <Text className="text-white font-black text-base">Ingresar</Text>
@@ -183,9 +186,8 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
               {!isWorking && (
                 <View style={{ gap: 12 }}>
                   <TouchableOpacity
-                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
+                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center active:opacity-80"
                     onPress={handleExportDB}
-                    activeOpacity={0.8}
                   >
                     <View className="w-12 h-12 bg-primary/20 rounded-full items-center justify-center mr-4">
                       <Download color="#3B82F6" size={22} />
@@ -199,9 +201,8 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
+                    className="bg-background border border-border rounded-2xl p-5 flex-row items-center active:opacity-80"
                     onPress={handleRecoverProgress}
-                    activeOpacity={0.8}
                   >
                     <View className="w-12 h-12 bg-accent/20 rounded-full items-center justify-center mr-4">
                       <RefreshCw color="#CA5D1E" size={22} />
