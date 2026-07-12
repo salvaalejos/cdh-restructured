@@ -38,9 +38,10 @@ export default function FormsPage() {
         return () => clearTimeout(handler);
     }, [searchInput, searchQuery]);
 
-    useEffect(() => {
+    const handleDateChange = (newDate: Date | undefined) => {
+        setDate(newDate);
         setPage(1);
-    }, [date]);
+    };
 
     const handleCreateNew = () => {
         navigate('/admin/forms/create');
@@ -110,14 +111,14 @@ export default function FormsPage() {
                         <Calendar
                             mode="single"
                             selected={date}
-                            onSelect={setDate}
+                            onSelect={handleDateChange}
                             initialFocus
                         />
                     </PopoverContent>
                 </Popover>
                 
                 {date && (
-                    <Button variant="ghost" onClick={() => setDate(undefined)} className="text-muted-foreground">
+                    <Button variant="ghost" onClick={() => handleDateChange(undefined)} className="text-muted-foreground">
                         Limpiar Fecha
                     </Button>
                 )}

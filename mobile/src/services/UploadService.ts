@@ -48,16 +48,24 @@ export async function uploadPendingRespondents(
   const localSurvey = surveys[0];
   if (!localSurvey) return { total: 0, uploaded: 0, failed: 0 };
 
+  const allAnswers = await Promise.all(
+    pending.map((respondent) =>
+      database
+        .get<Answer>('answers')
+        .query(Q.where('respondent_id', respondent.id))
+        .fetch()
+    )
+  );
+
+  // Sequential on purpose: progress callback must report accurate current index,
+  // and concurrent uploads could overwhelm slow mobile connections.
   for (let i = 0; i < pending.length; i++) {
     const respondent = pending[i];
 
     onProgress?.({ total, completed: uploaded + failed, failed, current: i + 1 });
 
     try {
-      const answers = await database
-        .get<Answer>('answers')
-        .query(Q.where('respondent_id', respondent.id))
-        .fetch();
+      const answers = allAnswers[i];
 
       const answersPayload = answers.map((a) => ({
         questionId: a.serverQuestionId,

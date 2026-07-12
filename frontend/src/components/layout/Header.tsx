@@ -17,6 +17,22 @@ import { Sidebar } from "./Sidebar";
 import { ModeToggle } from "@/components/mode-toggle";
 import LogoHorizontal from "@/logos/HORIZONTAL.png";
 
+const getImageUrl = (path: string | undefined | null) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  const API_URL = import.meta.env.VITE_API_URL || '';
+  return `${API_URL}${path}`;
+};
+
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+};
+
 export function Header() {
   const authUser = useAuthStore((state) => state.user);
   const { data: accountUser } = useAccount();
@@ -25,22 +41,6 @@ export function Header() {
 
   // Prefer data from API if available to reflect real-time updates
   const user = accountUser || authUser;
-
-  const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    const API_URL = import.meta.env.VITE_API_URL || '';
-    return `${API_URL}${path}`;
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
 
   return (
     <header className="h-16 bg-card border-b border-border shadow-sm flex items-center justify-between px-4 lg:px-8 z-10">

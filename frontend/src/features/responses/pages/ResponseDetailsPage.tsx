@@ -118,6 +118,7 @@ export default function ResponseDetailsPage() {
                                                     download={`evidencia_${respondent.id}.jpg`}
                                                     className="bg-primary text-primary-foreground p-3 rounded-full hover:scale-110 transition-transform shadow-lg"
                                                     title="Descargar Imagen"
+                                                    aria-label="Descargar imagen de evidencia"
                                                 >
                                                     <Download className="h-5 w-5" />
                                                 </a>

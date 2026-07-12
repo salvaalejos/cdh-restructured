@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useSurveyStore } from './store';
 import { Camera, CheckCircle, SkipForward, Camera as CameraIcon } from 'lucide-react-native';
 import CustomModal, { CustomModalProps } from '../../components/ui/CustomModal';
@@ -100,15 +100,16 @@ export default function FinalCameraView() {
 
       {/* Botón discreto para regresar (Oculto si se activó la cámara o la encuesta fue cancelada) */}
       {!isCancelled && !isCameraActive && (
-        <TouchableOpacity 
-          className="absolute top-16 left-6 flex-row items-center active:opacity-60 z-10"
+        <Pressable 
+          className="absolute top-16 left-6 flex-row items-center z-10"
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           onPress={prevQuestion}
         >
           <ArrowLeft color="#64748B" size={20} style={{ marginRight: 6 }} />
           <Text className="text-muted-foreground font-bold text-sm tracking-wide">
             Corregir
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {/* Header */}
@@ -134,15 +135,16 @@ export default function FinalCameraView() {
           <View className="items-center justify-center p-6">
             <Camera color="#64748B" size={64} opacity={0.3} className="mb-6" />
             
-            <TouchableOpacity 
-              className="bg-primary px-8 py-4 rounded-xl flex-row items-center justify-center shadow-lg active:opacity-80"
+            <Pressable 
+              className="bg-primary px-8 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
               onPress={startCamera}
             >
               <Camera color="#F8FAFC" size={24} style={{ marginRight: 12 }} />
               <Text className="text-primary-foreground font-bold text-lg tracking-wide">
                 Activar Cámara
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {!isCancelled && (
               <Text className="text-muted-foreground text-center text-sm mt-6 px-4">
@@ -161,19 +163,20 @@ export default function FinalCameraView() {
               isActive={true}
               outputs={[photoOutput]}
             />
-            <TouchableOpacity 
-              className="absolute bottom-8 bg-white/30 w-24 h-24 rounded-full border-4 border-white shadow-2xl items-center justify-center active:bg-white/50"
+            <Pressable 
+              className="absolute bottom-8 bg-white/30 w-24 h-24 rounded-full border-4 border-white shadow-2xl items-center justify-center"
+              style={({ pressed }) => ({ backgroundColor: pressed ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' })}
               onPress={takePhoto}
             >
               <View className="w-20 h-20 bg-white rounded-full" />
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity 
+            <Pressable 
               className="absolute top-6 right-6 bg-black/50 px-4 py-2 rounded-full"
               onPress={() => setIsCameraActive(false)}
             >
               <Text className="text-white font-bold">Cerrar</Text>
-            </TouchableOpacity>
+            </Pressable>
           </>
         )}
 
@@ -181,12 +184,13 @@ export default function FinalCameraView() {
           <>
             <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             <View className="absolute bottom-6 flex-row gap-4">
-              <TouchableOpacity 
-                className="bg-destructive/90 px-6 py-3 rounded-full border-2 border-background shadow-xl active:bg-destructive"
+              <Pressable 
+                className="bg-destructive/90 px-6 py-3 rounded-full border-2 border-background shadow-xl"
+                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                 onPress={() => setPhotoUri(null)}
               >
                 <Text className="text-white font-bold tracking-wide">Descartar</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </>
         )}
@@ -198,28 +202,30 @@ export default function FinalCameraView() {
 
         {/* Solo permitir omitir si NO está cancelada, no hay foto y no la ha omitido ya */}
         {!isCancelled && !photoUri && !isOmitted && !isCameraActive && (
-          <TouchableOpacity 
-            className="w-full bg-secondary border border-border py-4 rounded-xl flex-row items-center justify-center active:opacity-80 mb-3"
+          <Pressable 
+            className="w-full bg-secondary/50 border py-4 rounded-xl flex-row items-center justify-center mb-3"
+            style={({ pressed }) => ({ borderColor: 'rgba(100, 116, 139, 0.3)', opacity: pressed ? 0.8 : 1 })}
             onPress={handleSkip}
           >
             <SkipForward color="#F8FAFC" size={20} style={{ marginRight: 12 }} />
             <Text className="text-secondary-foreground font-bold text-base tracking-wide">
               Omitir Evidencia
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Solo mostrar Finalizar si ya se cumplió el requisito de la evidencia */}
         {(photoUri || isOmitted) && (
-          <TouchableOpacity 
-            className="w-full bg-success py-4 rounded-xl flex-row items-center justify-center shadow-lg shadow-success/30 active:opacity-80"
+          <Pressable 
+            className="w-full bg-success py-4 rounded-xl flex-row items-center justify-center shadow-lg shadow-success/30"
+            style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
             onPress={handleFinish}
           >
             <CheckCircle color="#F8FAFC" size={24} style={{ marginRight: 12 }} />
             <Text className="text-success-foreground font-black text-lg tracking-wide text-white">
               Guardar y Salir
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 

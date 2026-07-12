@@ -190,11 +190,13 @@ export function UserFormModal({ open, onClose, userToEdit }: UserFormModalProps)
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Rol</Label>
+                            <Label htmlFor="role-select">Rol</Label>
                             <select 
+                                id="role-select"
                                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                                 value={roleId} 
                                 onChange={e => setRoleId(e.target.value)}
+                                aria-label="Seleccionar rol"
                             >
                                 <option value="3">Encuestador</option>
                                 <option value="1">Administrador Principal</option>
@@ -259,13 +261,14 @@ export function UserFormModal({ open, onClose, userToEdit }: UserFormModalProps)
                                     const isLocked = card.key === 'viewSurveys' && isSelected && (permissions.createSurvey || permissions.assignUsers || permissions.viewIndividualResults);
                                     
                                     return (
-                                        <div 
+                                        <button 
                                             key={card.key}
+                                            type="button"
                                             onClick={() => {
                                                 if (!isLocked) handlePermissionChange(card.key, !isSelected);
                                             }}
                                             className={cn(
-                                                "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 select-none",
+                                                "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 select-none w-full",
                                                 isLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer",
                                                 isSelected 
                                                     ? cn("border-primary bg-primary text-primary-foreground shadow-md", !isLocked && "scale-[1.02]") 
@@ -274,7 +277,7 @@ export function UserFormModal({ open, onClose, userToEdit }: UserFormModalProps)
                                         >
                                             <Icon className="h-6 w-6 mb-2" />
                                             <span className="text-xs font-semibold text-center leading-tight">{card.label}</span>
-                                        </div>
+                                        </button>
                                     )
                                 })}
                             </div>

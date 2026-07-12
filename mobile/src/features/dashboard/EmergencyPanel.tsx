@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, TextInput,
+  View, Text, Pressable, TextInput,
   Modal, ActivityIndicator, ScrollView,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -20,7 +20,10 @@ import { syncAssignment } from '../../services/SyncService';
 import { X, ShieldAlert, Download, RefreshCw } from 'lucide-react-native';
 import CustomModal from '../../components/ui/CustomModal';
 
-const EMERGENCY_PASSWORD = process.env.EMERGENCY_PASSWORD ?? 'cdh2026admin';
+if (!process.env.EXPO_PUBLIC_EMERGENCY_PASSWORD) {
+  throw new Error('[EmergencyPanel] EXPO_PUBLIC_EMERGENCY_PASSWORD env var is not set');
+}
+const EMERGENCY_PASSWORD = process.env.EXPO_PUBLIC_EMERGENCY_PASSWORD;
 
 interface EmergencyPanelProps {
   visible: boolean;
@@ -136,9 +139,9 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
               <ShieldAlert color="#EF4444" size={22} style={{ marginRight: 10 }} />
               <Text className="text-foreground text-lg font-black">Panel de Emergencia</Text>
             </View>
-            <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
+            <Pressable onPress={handleClose} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
               <X color="#64748B" size={24} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {step === 'auth' ? (
@@ -160,12 +163,12 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
               {!!authError && (
                 <Text className="text-destructive text-sm mb-3 font-medium">{authError}</Text>
               )}
-              <TouchableOpacity
+              <Pressable
                 className="w-full bg-destructive py-4 rounded-xl items-center justify-center"
                 onPress={handleAuth}
               >
                 <Text className="text-white font-black text-base">Ingresar</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : (
             <ScrollView>
@@ -182,10 +185,10 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
 
               {!isWorking && (
                 <View style={{ gap: 12 }}>
-                  <TouchableOpacity
+                  <Pressable
                     className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
                     onPress={handleExportDB}
-                    activeOpacity={0.8}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <View className="w-12 h-12 bg-primary/20 rounded-full items-center justify-center mr-4">
                       <Download color="#3B82F6" size={22} />
@@ -196,12 +199,12 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                         Guarda un respaldo JSON de todos los registros locales en el almacenamiento de la app.
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
 
-                  <TouchableOpacity
+                  <Pressable
                     className="bg-background border border-border rounded-2xl p-5 flex-row items-center"
                     onPress={handleRecoverProgress}
-                    activeOpacity={0.8}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <View className="w-12 h-12 bg-accent/20 rounded-full items-center justify-center mr-4">
                       <RefreshCw color="#CA5D1E" size={22} />
@@ -212,7 +215,7 @@ export default function EmergencyPanel({ visible, onClose }: EmergencyPanelProps
                         Re-sincroniza la encuesta desde el servidor para restaurar el estado visible.
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               )}
             </ScrollView>

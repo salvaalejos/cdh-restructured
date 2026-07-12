@@ -25,14 +25,14 @@ interface FormsTableProps {
     onPreview?: (survey: Survey) => void;
 }
 
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-MX', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+};
+
 export function FormsTable({ surveys, meta, onPageChange, onViewDetails, onPreview }: FormsTableProps) {
     const { mutate: deleteSurvey } = useDeleteSurvey();
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('es-MX', {
-            year: 'numeric', month: 'long', day: 'numeric'
-        });
-    };
 
     const handleDelete = (id: number) => {
         deleteSurvey(id, {

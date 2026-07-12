@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Animated } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Image, Animated } from 'react-native';
 import { useSurveyStore, Question, Option } from './store';
 import { ArrowLeft, ArrowRight, ArrowDown, XCircle } from 'lucide-react-native';
 import CustomModal from '../../components/ui/CustomModal';
@@ -138,9 +138,8 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                 const hasImage = !!opt.image;
 
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={opt.id}
-                    activeOpacity={0.8}
                     onPress={() => {
                       try {
                         if (question.typeId === 2) {
@@ -158,10 +157,11 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                       }
                     }}
                     className="border-2 rounded-2xl mb-4 overflow-hidden shadow-sm w-full"
-                    style={{
-                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#FFFFFF',
-                      borderColor: isSelected ? '#3B82F6' : '#E2E8F0'
-                    }}
+                    style={({ pressed }) => ({
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1E293B',
+                      borderColor: isSelected ? '#3B82F6' : 'rgba(100, 116, 139, 0.3)',
+                      opacity: pressed ? 0.8 : 1,
+                    })}
                   >
                     {hasImage && (
                       <Image 
@@ -181,14 +181,14 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                       >
                         {isSelected && <View className="w-2.5 h-2.5 bg-background rounded-full" />}
                       </View>
-                      <Text 
+                      <Text
                         className="text-lg font-bold flex-1"
-                        style={{ color: isSelected ? '#3B82F6' : '#1E293B' }}
+                        style={{ color: isSelected ? '#3B82F6' : '#F8FAFC' }}
                       >
                         {opt.text}
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                          </Pressable>
                 );
               })}
             </View>
@@ -209,8 +209,8 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                     key={opt.id}
                     className="border-2 rounded-2xl mb-4 overflow-hidden"
                     style={{
-                      backgroundColor: hasSelection ? 'rgba(59, 130, 246, 0.05)' : '#FFFFFF',
-                      borderColor: hasSelection ? '#3B82F6' : '#E2E8F0'
+                      backgroundColor: hasSelection ? 'rgba(59, 130, 246, 0.05)' : '#1E293B',
+                      borderColor: hasSelection ? '#3B82F6' : 'rgba(100, 116, 139, 0.3)'
                     }}
                   >
                     {/* Option text */}
@@ -239,9 +239,8 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                           : (Array.isArray(currentOptAnswer) && currentOptAnswer.includes(subOpt.id));
 
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={subOpt.id}
-                            activeOpacity={0.7}
                             onPress={() => {
                               if (question.typeId === 4) {
                                 const newState = { ...(currentAnswer || {}), [opt.id]: subOpt.id };
@@ -256,7 +255,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                               }
                             }}
                             className="flex-row items-center py-3 border-b border-border"
-                            style={{ borderBottomWidth: 1 }}
+                            style={({ pressed }) => ({ borderBottomWidth: 1, opacity: pressed ? 0.7 : 1 })}
                           >
                             <View
                               className={`w-6 h-6 border-2 items-center justify-center mr-4 ${question.typeId === 5 ? 'rounded-md' : 'rounded-full'}`}
@@ -271,11 +270,11 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                             </View>
                             <Text
                               className="text-base flex-1"
-                              style={{ color: isSubSelected ? '#3B82F6' : '#1E293B' }}
+                              style={{ color: isSubSelected ? '#3B82F6' : '#F8FAFC' }}
                             >
                               {subOpt.text}
                             </Text>
-                          </TouchableOpacity>
+                  </Pressable>
                         );
                       })}
                     </View>
@@ -309,41 +308,43 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
       {/* Footer Navigation */}
       <View className="flex-row items-center justify-between pt-4 border-t border-border">
         {index > 0 ? (
-          <TouchableOpacity 
-            className="w-14 h-14 bg-secondary rounded-xl items-center justify-center active:opacity-80 border border-border"
+          <Pressable
+            className="w-14 h-14 bg-secondary rounded-xl items-center justify-center border border-border"
+            style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
             onPress={prevQuestion}
           >
             <ArrowLeft color="#F8FAFC" size={24} />
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <View className="w-14 h-14" /> // Spacer
         )}
 
-        <TouchableOpacity 
-          className="flex-1 mx-4 bg-destructive/10 border border-destructive py-4 rounded-xl flex-row items-center justify-center active:bg-destructive/20"
+        <Pressable
+          className="flex-1 mx-5 bg-destructive/10 border border-destructive py-4 rounded-xl flex-row items-center justify-center"
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
           onPress={handleCancel}
         >
           <XCircle color="#EF4444" size={20} style={{ marginRight: 12 }} />
           <Text className="text-destructive font-bold text-base tracking-wide">Cancelar</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity 
+        <Pressable
           className="w-14 h-14 rounded-xl items-center justify-center border"
-          style={{
-            backgroundColor: isNextDisabled ? '#F1F5F9' : '#3B82F6', // bg-muted : bg-primary
-            borderColor: isNextDisabled ? 'rgba(100, 116, 139, 0.3)' : '#3B82F6', // border-muted-foreground/30 : border-primary
-            opacity: isNextDisabled ? 0.5 : 1,
+          style={({ pressed }) => ({
+            backgroundColor: isNextDisabled ? '#1E293B' : '#3B82F6',
+            borderColor: isNextDisabled ? 'rgba(100, 116, 139, 0.3)' : '#3B82F6',
+            opacity: isNextDisabled ? 0.5 : (pressed ? 0.8 : 1),
             shadowColor: isNextDisabled ? 'transparent' : '#3B82F6',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: isNextDisabled ? 0 : 0.3,
             shadowRadius: 10,
-            elevation: isNextDisabled ? 0 : 5
-          }}
+            elevation: isNextDisabled ? 0 : 5,
+          })}
           onPress={handleNext}
           disabled={isNextDisabled}
         >
           <ArrowRight color={isNextDisabled ? "#64748B" : "#F8FAFC"} size={24} strokeWidth={isNextDisabled ? 2 : 3} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
     </View>

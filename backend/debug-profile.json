@@ -1,9 +1,9 @@
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsInJvbGVJZCI6MywidXNlcm5hbWUiOiJlbmN1ZXN0YWRvcl8xIiwiaWF0IjoxNzgzNzk3MzkwfQ.knAR99gqUrFqsUijBGxA6Hk5Nx7SsVTl7ieUSJdapeE",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjQsInJvbGVJZCI6MywidXNlcm5hbWUiOiJlbmN1ZXN0YWRvcnBydWViYSIsImlhdCI6MTc4Mzg0MDIzNH0.fXD8zjTVz4qQ85snkhEQlGOcXJwIOfefC1uQWmudJTA",
   "profile": {
-    "id": 13,
+    "id": 24,
     "roleId": 3,
-    "username": "encuestador_1",
-    "iat": 1783797390
+    "username": "encuestadorprueba",
+    "iat": 1783840234
   }
 }

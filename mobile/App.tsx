@@ -16,7 +16,7 @@ export default function App() {
 
   useEffect(() => {
     checkSession();
-  }, []);
+  }, [checkSession]);
 
   if (isLoading) {
     return (
