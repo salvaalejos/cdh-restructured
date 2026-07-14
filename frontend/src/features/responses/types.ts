@@ -1,4 +1,4 @@
-import type { PaginatedResponse } from '../../users/types';
+import type { PaginatedResponse } from '../users/types';
 
 export interface Respondent {
     id: number;
@@ -48,7 +48,7 @@ export interface RespondentDetails extends Respondent {
             id: number;
             text: string;
             typeId: number;
-            options: { id: number; text: string }[];
+            options: { id: number; text: string; image?: string | null }[];
             subOptions: { id: number; text: string }[];
         }[];
     };

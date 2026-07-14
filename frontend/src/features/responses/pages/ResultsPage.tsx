@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -10,7 +10,7 @@ import { ResultsTable } from '../components/ResultsTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Map, Users, Filter, Download } from 'lucide-react';
+import { Map, Download } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
 // Fix Leaflet's default icon path issues with webpack/vite

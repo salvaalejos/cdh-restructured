@@ -111,10 +111,10 @@ export default function ResponseDetailsPage() {
                                     <div className="space-y-2">
                                         <div className="text-sm font-medium text-muted-foreground">Fotografía</div>
                                         <div className="relative group rounded-md overflow-hidden border border-border aspect-video bg-black/5 flex items-center justify-center">
-                                            <img src={mediaUrl(respondent.imagePath)} alt="Evidencia" className="object-contain w-full h-full" />
+                                            <img src={mediaUrl(respondent.imagePath) || undefined} alt="Evidencia" className="object-contain w-full h-full" />
                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                                 <a 
-                                                    href={mediaUrl(respondent.imagePath)} 
+                                                    href={mediaUrl(respondent.imagePath) || undefined} 
                                                     download={`evidencia_${respondent.id}.jpg`}
                                                     className="bg-primary text-primary-foreground p-3 rounded-full hover:scale-110 transition-transform shadow-lg"
                                                     title="Descargar Imagen"
@@ -250,7 +250,7 @@ export default function ResponseDetailsPage() {
                                                                         <td className="px-4 py-3 font-medium text-foreground">
                                                                             <div className="flex items-center gap-2">
                                                                                 {opt.image && (
-                                                                                    <img src={opt.image} alt={opt.text} className="w-8 h-8 object-contain rounded-sm border border-border shrink-0" />
+                                                                                    <img src={(opt as any).image} alt={opt.text} className="w-8 h-8 object-contain rounded-sm border border-border shrink-0" />
                                                                                 )}
                                                                                 <span>{opt.text}</span>
                                                                             </div>

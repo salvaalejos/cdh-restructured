@@ -1,4 +1,3 @@
-import type { PaginatedResponse } from '../../users/types';
 
 export interface Assignment {
     id: number;

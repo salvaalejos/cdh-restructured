@@ -77,7 +77,7 @@ export default function FormBuilderPage() {
     const addQuestion = () => {
         setQuestions([
             ...questions, 
-            { id: generateId(), text: '', typeId: 2, options: [{ text: '', image: null }], subOptions: [] }
+            { id: generateId(), text: '', typeId: 2, options: [{ text: '', image: null, imageUploadKey: null }], subOptions: [] }
         ]);
     };
 
@@ -361,7 +361,8 @@ export default function FormBuilderPage() {
                                     {(provided, snapshot) => (
                                         <div 
                                             ref={provided.innerRef} 
-                                            {...provided.draggableProps} 
+                                            {...provided.draggableProps}
+                                            style={provided.draggableProps.style as React.CSSProperties}
                                             className={`bg-card border p-6 rounded-md shadow-sm space-y-4 relative group ${snapshot.isDragging ? 'border-primary ring-2 ring-primary ring-opacity-50' : 'border-border'}`}
                                         >
                                             <div className="absolute top-4 left-2 cursor-grab opacity-50 hover:opacity-100" {...provided.dragHandleProps}>

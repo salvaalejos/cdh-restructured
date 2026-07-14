@@ -48,7 +48,7 @@ export default function FormsPage() {
     };
 
     const handleViewDetails = (survey: Survey) => {
-        if (survey._count?.assignments && survey._count.assignments > 0) {
+        if ((survey._count as any)?.assignments && (survey._count as any).assignments > 0) {
             setSurveyToDuplicate(survey);
             setDuplicateDialogOpen(true);
         } else {
@@ -112,7 +112,7 @@ export default function FormsPage() {
                             mode="single"
                             selected={date}
                             onSelect={handleDateChange}
-                            initialFocus
+
                         />
                     </PopoverContent>
                 </Popover>

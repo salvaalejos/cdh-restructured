@@ -223,7 +223,7 @@ export function UserFormModal({ open, onClose, userToEdit }: UserFormModalProps)
                                         mode="single"
                                         selected={birthDate}
                                         onSelect={setBirthDate}
-                                        initialFocus
+
                                         locale={es}
                                         captionLayout="dropdown"
                                         fromYear={1920}
