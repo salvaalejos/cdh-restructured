@@ -219,6 +219,7 @@ export function UserFormModal({ open, onClose, userToEdit }: UserFormModalProps)
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0 z-50">
+                                    {/* @ts-ignore: Prop mismatch between DayPicker v8 and v9 */}
                                     <Calendar
                                         mode="single"
                                         selected={birthDate}
