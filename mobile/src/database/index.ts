@@ -10,7 +10,7 @@ import Answer from './models/Answer';
 
 const adapter = new SQLiteAdapter({
   schema,
-  jsi: true, /* Enable JSI for faster synchronous queries on Android/iOS */
+  jsi: false, /* Disabled JSI to prevent fatal Hermes crash */
   onSetUpError: error => {
     // Database failed to load -- offer the user to reload the app or log out
     console.error('WatermelonDB setup error', error);

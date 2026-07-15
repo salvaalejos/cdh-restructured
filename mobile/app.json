@@ -40,8 +40,9 @@
             "targetSdkVersion": 34,
             "buildToolsVersion": "34.0.0",
             "ndkVersion": "27.1.12297006",
+            "usesCleartextTraffic": true,
             "extraMavenRepos": [
-              "../../node_modules/@notifee/react-native/android/libs"
+              "./node_modules/@notifee/react-native/android/libs"
             ]
           }
         }
@@ -54,6 +55,11 @@
         }
       ],
       "expo-image"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "69a9c356-29fb-4077-8f78-3eb21f6c9da6"
+      }
+    }
   }
 }

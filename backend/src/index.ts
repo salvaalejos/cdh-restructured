@@ -14,7 +14,7 @@ const app = new Elysia()
     .use(cors())
     .get('/favicon.ico', () => new Response(null, { status: 204 }))
     .use(staticPlugin({
-        assets: 'uploads',
+        assets: import.meta.dir + '/../uploads',
         prefix: '/uploads'
     }))
     .use(swagger({
