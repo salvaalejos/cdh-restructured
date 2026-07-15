@@ -54,7 +54,8 @@
           "locationAlwaysAndWhenInUsePermission": "La aplicación necesita tu ubicación para registrar el lugar de la encuesta."
         }
       ],
-      "expo-image"
+      "expo-image",
+      "./plugins/withCleartextTraffic"
     ],
     "extra": {
       "eas": {

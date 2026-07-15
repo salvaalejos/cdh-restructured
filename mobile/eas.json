@@ -11,6 +11,10 @@
       "distribution": "internal"
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://165.227.200.92/api",
+        "EXPO_PUBLIC_EMERGENCY_PASSWORD": "CDH_emergencia_2026"
+      },
       "android": {
         "buildType": "apk"
       }
