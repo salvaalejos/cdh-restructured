@@ -35,14 +35,13 @@ const withCleartextTraffic = (config) => {
     },
   ]);
 
-  // 2. Referenciar el XML desde AndroidManifest.xml
+  // 2. Referenciar el XML desde AndroidManifest.xml (en el tag <application>, no <manifest>)
   config = withAndroidManifest(config, (config) => {
     const manifest = config.modResults.manifest;
-    if (manifest.$) {
-      manifest.$['android:networkSecurityConfig'] =
+    if (manifest.application && manifest.application.$) {
+      manifest.application.$['android:networkSecurityConfig'] =
         '@xml/network_security_config';
-      // También forzamos usesCleartextTraffic a nivel de atributo
-      manifest.$['android:usesCleartextTraffic'] = 'true';
+      manifest.application.$['android:usesCleartextTraffic'] = 'true';
     }
     return config;
   });

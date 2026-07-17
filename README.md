@@ -71,6 +71,12 @@
   - [2. Backend](#2-backend)
   - [3. Frontend](#3-frontend-terminal-separada)
   - [4. Móvil](#4-móvil-android)
+- [Deploy en Producción](#deploy-en-producción)
+  - [Arquitectura del Servidor](#arquitectura-del-servidor)
+  - [Caddy (Reverse Proxy)](#caddy-reverse-proxy)
+  - [Systemd (Backend)](#systemd-backend)
+  - [Construcción del APK](#construcción-del-apk)
+  - [Troubleshooting](#troubleshooting)
 - [Variables de Entorno](#variables-de-entorno)
 - [Cuentas de Prueba](#cuentas-de-prueba-seed)
 - [Licencia](#licencia)
@@ -509,6 +515,158 @@ npx expo run:android      # Requiere Android Studio / dispositivo físico
 ```
 
 > **Nota:** La app móvil apunta a `http://10.0.2.2:3000/api` por defecto (emulador). Para producción, cambiar `API_BASE_URL` en `mobile/.env`.
+
+---
+
+## Deploy en Producción
+
+### Arquitectura del Servidor
+
+```
+Internet
+   │
+   │ HTTP (:80)
+   v
+┌─────────────────────────────────────┐
+│  VPS — 165.227.200.92 (Ubuntu)     │
+│                                     │
+│  Caddy (reverse proxy :80)         │
+│    ├── /api/*       → :3000        │
+│    ├── /uploads/*   → :3000        │
+│    ├── /swagger/*   → :3000        │
+│    └── /* (default) → frontend/dist │
+│                                     │
+│  Bun + Elysia (:3000)              │
+│    └── systemd: cdh-backend         │
+│                                     │
+│  PostgreSQL 16 (:6543)             │
+│    └── Docker: cdh_postgres         │
+└─────────────────────────────────────┘
+```
+
+| Servicio | Puerto | Gestor |
+|---|---|---|
+| Caddy (reverse proxy) | 80 | systemctl |
+| Backend (Elysia + Bun) | 3000 | systemctl |
+| PostgreSQL | 6543 | Docker Compose |
+
+### Caddy (Reverse Proxy)
+
+Caddy maneja el routing HTTP entrante y sirve el frontend como archivos estáticos.
+
+**Caddyfile** (`/etc/caddy/Caddyfile`):
+
+```caddy
+http://165.227.200.92 {
+    handle /api/* {
+        reverse_proxy localhost:3000
+    }
+    handle /uploads/* {
+        reverse_proxy localhost:3000
+    }
+    handle /swagger/* {
+        reverse_proxy localhost:3000
+    }
+
+    handle {
+        root * /root/cdh-production/frontend/dist
+        try_files {path} /index.html
+        file_server
+    }
+}
+```
+
+> **Importante:** El prefijo `http://` es obligatorio. Sin él, Caddy v2 intenta auto-HTTPS y redirige todo HTTP a HTTPS (status 308), lo que rompe la app móvil porque no hay certificado TLS en el servidor.
+
+**Comandos útiles:**
+
+```bash
+sudo systemctl reload caddy     # Recargar config después de editar Caddyfile
+sudo systemctl status caddy     # Verificar estado
+sudo journalctl -u caddy -f     # Ver logs en tiempo real
+```
+
+### Systemd (Backend)
+
+El backend corre como un servicio systemd que ejecuta `bun run start` (equivalente a `bun run src/index.ts`).
+
+**Servicio** (`/etc/systemd/system/cdh-backend.service`):
+
+```ini
+[Unit]
+Description=CDH Backend (Elysia + Bun)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/cdh-production/backend
+ExecStart=/root/.bun/bin/bun run start
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+EnvironmentFile=/root/cdh-production/backend/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Comandos útiles:**
+
+```bash
+sudo systemctl start cdh-backend    # Iniciar
+sudo systemctl stop cdh-backend     # Detener
+sudo systemctl restart cdh-backend  # Reiniciar
+sudo systemctl status cdh-backend   # Verificar estado
+sudo journalctl -u cdh-backend -f   # Ver logs en tiempo real
+```
+
+### Construcción del APK
+
+El APK se compila con EAS Build (cloud). La configuración está en `mobile/eas.json`.
+
+```bash
+cd mobile
+bun install
+eas build --profile production --platform android
+```
+
+**Puntos clave:**
+- `eas.json` inyecta `EXPO_PUBLIC_API_BASE_URL=http://165.227.200.92/api` durante el build
+- El plugin `plugins/withCleartextTraffic.js` genera `network_security_config.xml` para permitir HTTP sin cifrar (necesario porque el servidor no tiene HTTPS)
+- El build genera un APK (no AAB) para sideloading directo en dispositivos
+
+**Después de compilar:**
+1. Descargar el APK desde el dashboard de EAS Build
+2. Transferir al dispositivo Android
+3. Habilitar "Fuentes desconocidas" si es necesario
+4. Instalar el APK
+
+### Troubleshooting
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| App muestra "Conéctate a la red" | Caddy redirige HTTP→HTTPS (falta `http://` en Caddyfile) | Asegurar que el Caddyfile use `http://IP` (no solo `IP`). Recargar Caddy. |
+| App muestra "Conéctate a la red" | Android bloquea HTTP cleartext | Verificar `withCleartextTraffic.js` setea atributos en `<application>`. Rebuild el APK. |
+| `NOT_FOUND` desde navegador | Endpoint accesible vía GET (el login es POST) | Usar `curl -X POST` para probar: `curl -X POST http://165.227.200.92/api/auth/login -H 'Content-Type: application/json' -d '{"username":"admin","password":"admin123"}'` |
+| Backend no responde | Servicio caído | `sudo systemctl status cdh-backend` y `sudo journalctl -u cdh-backend -f` |
+| 502 Bad Gateway | Backend no está corriendo en :3000 | `sudo systemctl restart cdh-backend` |
+| PostgreSQL no accesible | Contenedor Docker caído | `docker ps` y `docker-compose up -d` |
+| Token JWT inválido | `JWT_SECRET` no coincide entre builds | Verificar `.env` del backend y que el secret no haya cambiado |
+
+**Probar conectividad desde el servidor:**
+
+```bash
+# Verificar que el backend responde
+curl -s http://localhost:3000/api/auth/login -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}'
+
+# Verificar que Caddy proxyea correctamente
+curl -s http://165.227.200.92/api/auth/login -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}'
+```
 
 ---
 
