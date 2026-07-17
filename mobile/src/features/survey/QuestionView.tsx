@@ -75,8 +75,8 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
 
   return (
     <View className="flex-1 bg-background pt-12 pb-6 px-6">
-      
-      <CustomModal 
+
+      <CustomModal
         visible={modalVisible}
         title="Cancelar Encuesta"
         description="¿Estás seguro que deseas cancelar esta encuesta? Se detendrá la grabación de audio y perderás todo el progreso de esta encuesta."
@@ -131,10 +131,10 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
           {[2, 3].includes(question.typeId) && question.options && (
             <View className="space-y-4">
               {question.options.map((opt: Option) => {
-                const isSelected = question.typeId === 2 
-                  ? currentAnswer === opt.id 
+                const isSelected = question.typeId === 2
+                  ? currentAnswer === opt.id
                   : (Array.isArray(currentAnswer) && currentAnswer.includes(opt.id));
-                
+
                 const hasImage = !!opt.image;
 
                 return (
@@ -159,20 +159,20 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                     }}
                     className="border-2 rounded-2xl mb-4 overflow-hidden shadow-sm w-full"
                     style={{
-                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#FFFFFF',
-                      borderColor: isSelected ? '#3B82F6' : '#E2E8F0'
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#020817',
+                      borderColor: isSelected ? '#3B82F6' : '#1E293B'
                     }}
                   >
                     {hasImage && (
-                      <Image 
-                        source={{ uri: opt.image }} 
+                      <Image
+                        source={{ uri: opt.image }}
                         className="w-full h-48 bg-secondary rounded-t-xl"
-                        resizeMode="contain" 
+                        resizeMode="contain"
                       />
                     )}
-                    
+
                     <View className="p-4 flex-row items-center">
-                      <View 
+                      <View
                         className={`w-5 h-5 border-2 mr-3 items-center justify-center ${question.typeId === 3 ? 'rounded-md' : 'rounded-full'}`}
                         style={{
                           borderColor: isSelected ? '#3B82F6' : '#64748B',
@@ -181,9 +181,9 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                       >
                         {isSelected && <View className="w-2.5 h-2.5 bg-background rounded-full" />}
                       </View>
-                      <Text 
+                      <Text
                         className="text-lg font-bold flex-1"
-                        style={{ color: isSelected ? '#3B82F6' : '#1E293B' }}
+                        style={{ color: isSelected ? '#3B82F6' : '#F8FAFC' }}
                       >
                         {opt.text}
                       </Text>
@@ -209,13 +209,13 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                     key={opt.id}
                     className="border-2 rounded-2xl mb-4 overflow-hidden"
                     style={{
-                      backgroundColor: hasSelection ? 'rgba(59, 130, 246, 0.05)' : '#FFFFFF',
-                      borderColor: hasSelection ? '#3B82F6' : '#E2E8F0'
+                      backgroundColor: hasSelection ? 'rgba(59, 130, 246, 0.05)' : '#020817',
+                      borderColor: hasSelection ? '#3B82F6' : '#1E293B'
                     }}
                   >
                     {/* Option text */}
                     <View className="px-5 pt-4 pb-3">
-                      <Text className="text-foreground text-lg font-bold leading-tight">
+                      <Text className="text-foreground text-lg font-bold leading-tight" style={{ color: '#F8FAFC' }}>
                         {opt.text}
                       </Text>
                     </View>
@@ -271,7 +271,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
                             </View>
                             <Text
                               className="text-base flex-1"
-                              style={{ color: isSubSelected ? '#3B82F6' : '#1E293B' }}
+                              style={{ color: isSubSelected ? '#3B82F6' : '#F8FAFC' }}
                             >
                               {subOpt.text}
                             </Text>
@@ -309,7 +309,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
       {/* Footer Navigation */}
       <View className="flex-row items-center justify-between pt-4 border-t border-border">
         {index > 0 ? (
-          <TouchableOpacity 
+          <TouchableOpacity
             className="w-14 h-14 bg-secondary rounded-xl items-center justify-center active:opacity-80 border border-border"
             onPress={prevQuestion}
           >
@@ -319,7 +319,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
           <View className="w-14 h-14" /> // Spacer
         )}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-1 mx-4 bg-destructive/10 border border-destructive py-4 rounded-xl flex-row items-center justify-center active:bg-destructive/20"
           onPress={handleCancel}
         >
@@ -327,7 +327,7 @@ export default function QuestionView({ question, index, total }: QuestionViewPro
           <Text className="text-destructive font-bold text-base tracking-wide">Cancelar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           className="w-14 h-14 rounded-xl items-center justify-center border"
           style={{
             backgroundColor: isNextDisabled ? '#F1F5F9' : '#3B82F6',

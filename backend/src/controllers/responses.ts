@@ -7,20 +7,21 @@ import fs from 'fs'
 
 // Ensure upload directories exist
 const UPLOADS_ROOT = 'uploads/responses'
-fs.mkdirSync(UPLOADS_ROOT, { recursive: true })
+const ABSOLUTE_UPLOADS_ROOT = path.join(import.meta.dir, '../../uploads/responses')
+fs.mkdirSync(ABSOLUTE_UPLOADS_ROOT, { recursive: true })
 
 async function saveUploadedFileBuffer(
-  buffer: Buffer,
-  subDir: string,
-  prefix: string,
-  ext: string
+    buffer: Buffer,
+    subDir: string,
+    prefix: string,
+    ext: string
 ): Promise<string> {
-  const dir = path.join(UPLOADS_ROOT, subDir)
-  fs.mkdirSync(dir, { recursive: true })
-  const filename = `${prefix}_${Date.now()}.${ext}`
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, buffer)
-  return `${UPLOADS_ROOT}/${subDir}/${filename}`
+    const dir = path.join(ABSOLUTE_UPLOADS_ROOT, subDir)
+    fs.mkdirSync(dir, { recursive: true })
+    const filename = `${prefix}_${Date.now()}.${ext}`
+    const filePath = path.join(dir, filename)
+    fs.writeFileSync(filePath, buffer)
+    return `${UPLOADS_ROOT}/${subDir}/${filename}`
 }
 
 export const responsesController = new Elysia({ prefix: '/responses' })
@@ -163,7 +164,7 @@ export const responsesController = new Elysia({ prefix: '/responses' })
 
         // Build Where Clause
         const whereClause: any = { surveyId }
-        
+
         if (query.surveyorId) {
             whereClause.surveyorId = parseInt(query.surveyorId as string)
         }
@@ -231,15 +232,15 @@ export const responsesController = new Elysia({ prefix: '/responses' })
 
         try {
             const buffer = await generateSurveyExcel(surveyId)
-            
+
             // Generate filename based on survey title
             const survey = await prisma.survey.findUnique({ where: { id: surveyId }, select: { title: true } })
             const title = survey?.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'encuesta'
-            
+
             // The response headers must correctly define it as an attachment
             set.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             set.headers['Content-Disposition'] = `attachment; filename="resultados_${title}.xlsx"`
-            
+
             // In Elysia, returning a buffer or blob directly will send it with the given headers
             return buffer
         } catch (error: any) {
@@ -260,16 +261,16 @@ export const responsesController = new Elysia({ prefix: '/responses' })
                 where: { id },
                 include: {
                     surveyor: { select: { name: true, username: true } },
-                    survey: { 
-                        include: { 
+                    survey: {
+                        include: {
                             questions: {
                                 include: {
                                     options: true,
                                     subOptions: true
                                 },
                                 orderBy: { id: 'asc' }
-                            } 
-                        } 
+                            }
+                        }
                     },
                     answers: {
                         include: {

@@ -117,7 +117,7 @@ bun run dev
 ### Key implementation rules
 - **Audio:** `.m4a` AAC via `react-native-nitro-sound` + `@notifee` Foreground Service notification
 - **Camera:** `react-native-vision-camera` (JSI direct), output `.jpg` at controlled resolution
-- **Upload:** Batch `multipart/form-data` (no Base64 for heavy files — 4GB RAM limit)
+- **Upload:** Enviar `imageData` y `audioData` como `Base64` en el formData, la web está adaptada para recibirlos así. (No usar multipart crudo por problemas en Android).
 - **Post-upload:** Delete local record + files from WatermelonDB per HTTP 200
 - **Emergency:** JSON backup of full DB with special password; local recovery button
 - **Forced navigation:** Cannot skip questions, only go back. Cancel requires evidence photo
