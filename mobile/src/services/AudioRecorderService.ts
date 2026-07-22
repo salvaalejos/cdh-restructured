@@ -8,7 +8,7 @@
  */
 
 import { AppState } from 'react-native';
-import notifee, { AndroidImportance, AndroidColor } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidColor, AndroidForegroundServiceType } from '@notifee/react-native';
 import Sound from 'react-native-nitro-sound';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as KeepAwake from 'expo-keep-awake';
@@ -48,6 +48,7 @@ class AudioRecorderService {
         android: {
           channelId: channel,
           asForegroundService: true,
+          foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MICROPHONE],
           color: AndroidColor.RED,
           colorized: true,
           ongoing: true,
