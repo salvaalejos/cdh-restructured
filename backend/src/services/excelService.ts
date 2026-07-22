@@ -59,7 +59,7 @@ export async function generateSurveyExcel(surveyId: number): Promise<Buffer> {
     worksheet.mergeCells(1, 3, 3, 3); worksheet.getCell(1, 3).value = 'Edad'; applyStyle(worksheet.getCell(1, 3), formatPreguntas);
     
     worksheet.mergeCells(1, 4, 1, 9); worksheet.getCell(1, 4).value = 'Escolaridad'; applyStyle(worksheet.getCell(1, 4), formatPreguntas);
-    worksheet.mergeCells(2, 4, 3, 4); worksheet.getCell(2, 4).value = 'Ninguna'; applyStyle(worksheet.getCell(2, 4), formatHeader);
+    worksheet.mergeCells(2, 4, 3, 4); worksheet.getCell(2, 4).value = 'Sin escolaridad'; applyStyle(worksheet.getCell(2, 4), formatHeader);
     worksheet.mergeCells(2, 5, 3, 5); worksheet.getCell(2, 5).value = 'Primaria'; applyStyle(worksheet.getCell(2, 5), formatHeader);
     worksheet.mergeCells(2, 6, 3, 6); worksheet.getCell(2, 6).value = 'Secundaria'; applyStyle(worksheet.getCell(2, 6), formatHeader);
     worksheet.mergeCells(2, 7, 3, 7); worksheet.getCell(2, 7).value = 'Preparatoria'; applyStyle(worksheet.getCell(2, 7), formatHeader);
@@ -154,7 +154,7 @@ export async function generateSurveyExcel(surveyId: number): Promise<Buffer> {
         r.getCell(3).value = respondent.age || '';
         
         const esc = (respondent.schooling || '').toLowerCase();
-        r.getCell(4).value = esc.includes('ninguna') ? 1 : 0;
+        r.getCell(4).value = esc.includes('sin escolaridad') ? 1 : 0;
         r.getCell(5).value = esc.includes('primaria') ? 1 : 0;
         r.getCell(6).value = esc.includes('secundaria') ? 1 : 0;
         r.getCell(7).value = esc.includes('preparatoria') ? 1 : 0;

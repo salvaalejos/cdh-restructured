@@ -62,7 +62,9 @@ export default function FinalCameraView() {
     setModalConfig({
       visible: true,
       title: "Finalizar Encuesta",
-      description: "Se guardará el registro localmente y se detendrá la grabación de audio.",
+      description: isTestMode
+        ? "La encuesta se finalizará sin guardar ningún dato."
+        : "Se guardará el registro localmente y se detendrá la grabación de audio.",
       type: "info",
       confirmText: "Confirmar",
       cancelText: "Cancelar",
@@ -79,7 +81,9 @@ export default function FinalCameraView() {
     setModalConfig({
       visible: true,
       title: "Omitir Fotografía",
-      description: "¿Estás seguro de omitir la evidencia fotográfica? (El audio se guardará de todos modos).",
+      description: isTestMode
+        ? "¿Estás seguro de omitir la evidencia fotográfica? (El audio no se guardará en modo prueba)."
+        : "¿Estás seguro de omitir la evidencia fotográfica? (El audio se guardará de todos modos).",
       type: "destructive",
       confirmText: "Sí, Omitir",
       cancelText: "No",

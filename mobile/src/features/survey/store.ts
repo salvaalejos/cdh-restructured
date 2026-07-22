@@ -450,7 +450,7 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     const { isTestMode, activeRespondentId } = get();
 
     // Detener grabación de audio
-    const finalAudio = audioUri ?? (await AudioRecorderService.stopRecording());
+    const finalAudio = audioUri ?? (await AudioRecorderService.stopRecording().catch(() => null));
 
     if (!isTestMode && activeRespondentId) {
       // Actualizar el Respondent con rutas de archivos y status=1 (listo para subir)

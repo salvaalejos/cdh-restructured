@@ -9,7 +9,7 @@ const randomChoice = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.leng
 const randomLat = () => 23.6345 + (Math.random() - 0.5) * 10;
 const randomLng = () => -102.5528 + (Math.random() - 0.5) * 10;
 const genders = ['Hombre', 'Mujer'];
-const schoolings = ['Ninguna', 'Primaria', 'Secundaria', 'Preparatoria', 'Licenciatura', 'Posgrado'];
+const schoolings = ['Sin escolaridad', 'Primaria', 'Secundaria', 'Preparatoria', 'Licenciatura', 'Posgrado'];
 
 async function main() {
     console.log('🌱 Iniciando la siembra de datos masiva...');

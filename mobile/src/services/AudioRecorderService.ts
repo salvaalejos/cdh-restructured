@@ -7,14 +7,17 @@
  * Usa @notifee/react-native para el Foreground Service (REQ-NF-02).
  */
 
+import { AppState } from 'react-native';
 import notifee, { AndroidImportance, AndroidColor } from '@notifee/react-native';
 import Sound from 'react-native-nitro-sound';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as KeepAwake from 'expo-keep-awake';
 
 class AudioRecorderService {
   private channelId: string | null = null;
   private isRecording: boolean = false;
   private currentPath: string | null = null;
+  private appStateSubscription: any = null;
 
   async initChannel() {
     if (this.channelId) return this.channelId;
@@ -69,9 +72,22 @@ class AudioRecorderService {
 
       this.isRecording = true;
       console.log(`[AudioService] Grabación iniciada → ${rawPath}`);
+
+      // Mantener pantalla encendida durante grabación
+      await KeepAwake.activateKeepAwakeAsync();
+
+      // Detectar si la app pasa a background para cleanup
+      this.appStateSubscription = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'background' && this.isRecording) {
+          console.log('[AudioService] App en background, grabación continúa vía Foreground Service');
+        }
+      });
     } catch (error) {
       console.error('[AudioService] Error al iniciar grabación:', error);
       await notifee.stopForegroundService().catch(() => {});
+      await KeepAwake.deactivateKeepAwake().catch(() => {});
+      this.appStateSubscription?.remove();
+      this.appStateSubscription = null;
       this.isRecording = false;
       this.currentPath = null;
     }
@@ -86,6 +102,9 @@ class AudioRecorderService {
     try {
       await Sound.stopRecorder();
       await notifee.stopForegroundService();
+      await KeepAwake.deactivateKeepAwake();
+      this.appStateSubscription?.remove();
+      this.appStateSubscription = null;
 
       this.isRecording = false;
       const finalPath = this.currentPath;
@@ -96,6 +115,9 @@ class AudioRecorderService {
     } catch (error) {
       console.error('[AudioService] Error al detener grabación:', error);
       await notifee.stopForegroundService().catch(() => {});
+      await KeepAwake.deactivateKeepAwake().catch(() => {});
+      this.appStateSubscription?.remove();
+      this.appStateSubscription = null;
       this.isRecording = false;
       this.currentPath = null;
       return null;
