@@ -11,6 +11,7 @@ import ResultsPage from './features/responses/pages/ResultsPage'
 import ResponseDetailsPage from './features/responses/pages/ResponseDetailsPage'
 import AccountPage from './features/account/pages/AccountPage'
 import DashboardPage from './features/dashboard/pages/DashboardPage'
+import LogsPage from './features/logs/pages/LogsPage'
 import { PermissionRoute } from './components/layout/PermissionRoute'
 import { Toaster } from 'sonner'
 
@@ -46,6 +47,7 @@ function App() {
           <Route path="results" element={<PermissionRoute permissionKey="viewIndividualResults"><ResultsPage /></PermissionRoute>} />
           <Route path="results/:id" element={<PermissionRoute permissionKey="viewIndividualResults"><ResponseDetailsPage /></PermissionRoute>} />
           <Route path="account" element={<PermissionRoute blockRole={2}><AccountPage /></PermissionRoute>} />
+          <Route path="logs" element={<PermissionRoute blockRole={2}><LogsPage /></PermissionRoute>} />
         </Route>
 
         <Route path="/" element={<Navigate to="/admin" replace />} />

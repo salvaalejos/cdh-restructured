@@ -9,6 +9,7 @@ import { formsController } from './controllers/forms'
 import { assignmentsController } from './controllers/assignments'
 import { responsesController } from './controllers/responses'
 import { dashboardController } from './controllers/dashboard'
+import { logsController } from './controllers/logs'
 
 const app = new Elysia()
     .use(cors())
@@ -37,6 +38,7 @@ const app = new Elysia()
         .use(assignmentsController)
         .use(responsesController)
         .use(dashboardController)
+        .use(logsController)
     )
     .listen(3000)
 

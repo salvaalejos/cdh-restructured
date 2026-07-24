@@ -1,8 +1,10 @@
-import { NavLink } from "react-router-dom";
+import { useRef } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Users, FileText, ClipboardList, Settings, LayoutDashboard, Map } from "lucide-react";
 import LogoVertical from "@/logos/VERTICAL.png";
 import { useAuthStore } from "@/store/authStore";
 import { useAccount } from "@/features/account/api/accountHooks";
+import { toast } from "sonner";
 
 const ALL_NAV_ITEMS = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -17,12 +19,38 @@ export function Sidebar() {
   const authUser = useAuthStore((state) => state.user);
   const { data: accountUser } = useAccount();
   const user = accountUser || authUser;
+  const navigate = useNavigate();
+
+  const clickCountRef = useRef(0);
+  const lastClickTimeRef = useRef(0);
+
+  const handleLogoClick = () => {
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 1000) {
+      clickCountRef.current += 1;
+    } else {
+      clickCountRef.current = 1;
+    }
+    lastClickTimeRef.current = now;
+
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      toast.info("🛠️ Modo Depuración Activado", {
+        description: "Accediendo al panel de logs y telemetría del sistema...",
+      });
+      navigate("/admin/logs");
+    }
+  };
 
   return (
     <aside className="w-64 bg-card text-foreground flex flex-col h-full shadow-lg border-r border-border z-20">
-      {/* Brand Logo */}
-      <div className="h-28 flex items-center justify-center border-b border-border p-4 bg-background/50">
-        <img src={LogoVertical} alt="CDH Platform" className="h-full w-auto object-contain" />
+      {/* Brand Logo - Triple Click for Debug Logs */}
+      <div 
+        onClick={handleLogoClick}
+        title="CDH Platform (Haz 3 clics para acceder a los Logs del sistema)"
+        className="h-28 flex items-center justify-center border-b border-border p-4 bg-background/50 cursor-pointer hover:bg-background/80 transition-colors select-none"
+      >
+        <img src={LogoVertical} alt="CDH Platform" className="h-full w-auto object-contain pointer-events-none" />
       </div>
 
       {/* Navigation */}

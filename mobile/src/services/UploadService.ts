@@ -12,6 +12,7 @@ import { apiClient } from '../api/client';
 import { Q } from '@nozbe/watermelondb';
 import { useAuthStore } from '../features/auth/store';
 import notifee, { AndroidImportance, AndroidForegroundServiceType } from '@notifee/react-native';
+import { logger } from './LoggerService';
 
 export interface UploadProgress {
   total: number;
@@ -101,6 +102,9 @@ export async function uploadPendingRespondents(
   try {
     await updateUploadNotification(0, total);
 
+    // Intentar sincronizar logs acumulados previamente antes de subir encuestas
+    await logger.flushLogsToServer().catch(() => {});
+
     // Sequential on purpose: progress callback must report accurate current index,
     // and concurrent uploads could overwhelm slow mobile connections.
     for (let i = 0; i < pending.length; i++) {
@@ -108,6 +112,9 @@ export async function uploadPendingRespondents(
 
       onProgress?.({ total, completed: uploaded + failed, failed, current: i + 1 });
       await updateUploadNotification(uploaded + failed, total);
+
+      let imageBase64Length = 0;
+      let audioBase64Length = 0;
 
       try {
         const answers = allAnswers[i];
@@ -143,13 +150,13 @@ export async function uploadPendingRespondents(
             const base64 = await FileSystem.readAsStringAsync(fileUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
+            imageBase64Length = base64.length;
             formData.append('imageData', base64);
-            console.log('[UploadService] imagen adjuntada como base64');
+            console.log('[UploadService] imagen adjuntada como base64, tamaño:', base64.length);
           } else {
             console.warn('[UploadService] archivo de imagen NO EXISTE en la ruta guardada');
+            await logger.warn('UPLOAD', `Imagen faltante para respondent ${respondent.id}`, { imagePath: respondent.imagePath });
           }
-        } else {
-          console.log('[UploadService] imagePath es null, no hay imagen para adjuntar');
         }
 
         // Adjuntar audio como base64
@@ -161,17 +168,17 @@ export async function uploadPendingRespondents(
             const base64 = await FileSystem.readAsStringAsync(fileUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
+            audioBase64Length = base64.length;
             formData.append('audioData', base64);
-            console.log('[UploadService] audio adjuntado como base64');
+            console.log('[UploadService] audio adjuntado como base64, tamaño:', base64.length);
           } else {
             console.warn('[UploadService] archivo de audio NO EXISTE en la ruta guardada');
+            await logger.warn('UPLOAD', `Audio faltante para respondent ${respondent.id}`, { audioPath: respondent.audioPath });
           }
-        } else {
-          console.log('[UploadService] audioPath es null, no hay audio para adjuntar');
         }
 
         const response = await apiClient.post('/responses/submit', formData, {
-          timeout: 60000,
+          timeout: 240000, // 240 segundos (4 minutos) para soportar pruebas de carga pesadas
         });
 
         console.log(`[UploadService] Respuesta del servidor para respondent ${respondent.id}:`, response.data);
@@ -189,8 +196,24 @@ export async function uploadPendingRespondents(
       } catch (err: any) {
         console.error(`[UploadService] Error subiendo respondent ${respondent.id}:`, err.message);
         failed++;
+
+        // Capturar log de error detallado en LoggerService para telemetría
+        await logger.error('UPLOAD', `Fallo al subir encuesta de encuestado local #${respondent.id}`, {
+          respondentLocalId: respondent.id,
+          surveyId: localSurvey.serverSurveyId,
+          surveyorId: respondent.surveyorId,
+          answersCount: allAnswers[i]?.length ?? 0,
+          imageBase64Size: imageBase64Length,
+          audioBase64Size: audioBase64Length,
+          errorMessage: err.message,
+          responseStatus: err.response?.status,
+          responseData: err.response?.data,
+        });
       }
     }
+
+    // Intentar sincronizar los logs generados durante este proceso de subida
+    await logger.flushLogsToServer().catch(() => {});
 
     onProgress?.({ total, completed: uploaded + failed, failed, current: total });
     await updateUploadNotification(uploaded + failed, total);

@@ -23,6 +23,7 @@ model User {
 
   assignments Assignment[]
   respondents Respondent[]
+  appLogs     AppLog[]
 }
 
 model Survey {
@@ -111,3 +112,16 @@ model Answer {
   option       Option?    @relation(fields: [optionId], references: [id], onDelete: Cascade)
   subOption    SubOption? @relation(fields: [subOptionId], references: [id], onDelete: Cascade)
 }
+
+model AppLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  level     String   // ERROR, WARN, INFO
+  tag       String   // UPLOAD, DATABASE, NETWORK, SYSTEM
+  message   String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+

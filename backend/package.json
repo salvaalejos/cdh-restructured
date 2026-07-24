@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@prisma/client": "5",
+    "@prisma/client": "^5.22.0",
     "@types/bun": "latest",
-    "prisma": "5"
+    "prisma": "^5.22.0"
   },
   "peerDependencies": {
     "typescript": "^5"
