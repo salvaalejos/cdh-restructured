@@ -20,13 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -154,46 +147,38 @@ export default function LogsPage() {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground">Nivel:</span>
-              <Select
+              <select
                 value={levelFilter}
-                onValueChange={(val) => {
-                  setLevelFilter(val);
+                onChange={(e) => {
+                  setLevelFilter(e.target.value);
                   setPage(1);
                 }}
+                className="h-9 w-32 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
               >
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Nivel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos</SelectItem>
-                  <SelectItem value="ERROR">ERROR</SelectItem>
-                  <SelectItem value="WARN">WARN</SelectItem>
-                  <SelectItem value="INFO">INFO</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="ALL">Todos</option>
+                <option value="ERROR">ERROR</option>
+                <option value="WARN">WARN</option>
+                <option value="INFO">INFO</option>
+              </select>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-muted-foreground">Módulo:</span>
-              <Select
+              <select
                 value={tagFilter}
-                onValueChange={(val) => {
-                  setTagFilter(val);
+                onChange={(e) => {
+                  setTagFilter(e.target.value);
                   setPage(1);
                 }}
+                className="h-9 w-36 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
               >
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Módulo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos</SelectItem>
-                  <SelectItem value="UPLOAD">UPLOAD</SelectItem>
-                  <SelectItem value="DATABASE">DATABASE</SelectItem>
-                  <SelectItem value="NETWORK">NETWORK</SelectItem>
-                  <SelectItem value="SYSTEM">SYSTEM</SelectItem>
-                  <SelectItem value="AUTH">AUTH</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="ALL">Todos</option>
+                <option value="UPLOAD">UPLOAD</option>
+                <option value="DATABASE">DATABASE</option>
+                <option value="NETWORK">NETWORK</option>
+                <option value="SYSTEM">SYSTEM</option>
+                <option value="AUTH">AUTH</option>
+              </select>
             </div>
           </div>
         </div>
